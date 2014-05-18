@@ -1,4 +1,4 @@
-paper-currentevents
+currentevents
 ===================
 
-Some scripts and metadata for a paper about Current events articles in Wikipedia
+Some scripts and metadata about current events articles in Wikipedia
