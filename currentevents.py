@@ -45,6 +45,21 @@ def main():
     wanted_namespaces = {
         "eswiki": [0], #main
         }
+    fields = [
+        'page_title', 
+        'page_creation_date', 
+        'template_time_since_creation', 
+        'it_rev_id', #it = inserted template
+        'it_rev_timestamp', 
+        'it_rev_username', 
+        'it_rev_comment', 
+        'event_type', 
+        'rt_rev_id', #rt = removed template
+        'rt_rev_timestamp', 
+        'rt_rev_username', 
+        'rt_rev_comment', 
+        'template_duration', 
+        ]
     dumpfilename = sys.argv[1]
     chunkid = sys.argv[2]
     if dumpfilename.endswith('.7z'):
@@ -65,7 +80,7 @@ def main():
     
     #start CSV
     f = open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
-    f.write('page_title|page_creation_date|template_time_since_creation|it_rev_id|it_rev_timestamp|it_rev_username|event_type|it_rev_comment|rt_rev_id|rt_rev_timestamp|rt_rev_username|rt_rev_comment|template_duration\n')
+    f.write('%s\n' % ('|'.join(fields)))
     f.close()
     #blank newpages
     g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
@@ -108,27 +123,42 @@ def main():
                         break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
                         
                     insertedtemplate = rev.timestamp
-                    eventtype = re.findall(currentevents_r[dumplang], revtext)[0][2] and re.findall(currentevents_r[dumplang], revtext)[0][2] or 'Unknown'
-                    currentevents = [[page.title, pagecreationdate.long_format(), "%s" % template_time_since_creation, '%s' % rev.id, rev.timestamp.long_format(), rev.contributor.user_text, eventtype, revcomment and revcomment or "", "", "", "", "", ""]]
-                    #https://xx.wikipedia.org/w/index.php?oldid=%s&diff=prev
+                    eventtype = True and re.findall(currentevents_r[dumplang], revtext)[0][2] or 'Unknown'
+                    currentevent = {
+                        'page_title': page.title, 
+                        'page_creation_date': pagecreationdate.long_format(), 
+                        'template_time_since_creation': str(template_time_since_creation), 
+                        'event_type': eventtype, 
+                        'template_duration': "", 
+                        'it_rev_id': str(rev.id), #it = inserted template
+                        'it_rev_timestamp': rev.timestamp.long_format(), 
+                        'it_rev_username': rev.contributor.user_text, 
+                        'it_rev_comment': True and revcomment or "", 
+                        'rt_rev_id': "", #rt = removed template
+                        'rt_rev_timestamp': "", 
+                        'rt_rev_username': "", 
+                        'rt_rev_comment': "", 
+                    }
+                    currentevents.append(currentevent)
             else:
                 if insertedtemplate:
                     #template has been removed just now
-                    currentevents[-1][-1] = timediff(insertedtemplate.long_format(), rev.timestamp.long_format())
+                    currentevents[-1]['template_duration'] = timediff(insertedtemplate.long_format(), rev.timestamp.long_format())
+                    currentevents[-1]['rt_rev_comment'] = revcomment and revcomment or ""
+                    currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
+                    currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
+                    currentevents[-1]['rt_rev_id'] = str(rev.id)
                     insertedtemplate = False
-                    currentevents[-1][-2] = revcomment and revcomment or ""
-                    currentevents[-1][-3] = rev.contributor.user_text
-                    currentevents[-1][-4] = rev.timestamp.long_format()
-                    currentevents[-1][-5] = '%s' % rev.id
 
         if insertedtemplate:
             #template still as of dumpdate
-            currentevents[-1][-1] = timediff(insertedtemplate.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            currentevents[-1]['template_duration'] = timediff(insertedtemplate.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
             #print page.title, currentevents[-1]
     
         f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for i in currentevents:
-            f.writerow(i)
+            row = [i[field] for field in fields]
+            f.writerow(row)
 
 if __name__ == '__main__':
     main()

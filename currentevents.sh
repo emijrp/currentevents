@@ -1,6 +1,8 @@
 #!/bin/bash
 
-for i in {1..4}
+#bash currentevents.sh eswiki 20140509 4
+
+for i in {1..$3}
 do
-    jsub -N eswiki$i /bin/bash /data/project/currentevents/code/currentevents2.sh $i
+    jsub -N $1$i /bin/bash /data/project/currentevents/code/currentevents2.sh $1 $2 $i
 done
