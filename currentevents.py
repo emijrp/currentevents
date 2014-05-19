@@ -38,27 +38,37 @@ def timediff(start, end):
 
 def main():
     limitdays = 7 #template must be inserted before X days since page creation
-    #current events templates for different wikis
-    currentevents_r = {
+    #current events templates and categories for different wikis
+    currentevent_templates_r = {
         "eswiki": re.compile(r'(?im)(\{\{\s*(Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*[\|\}]([^\}]*?)\}\}?)'),
         }
+    currentevent_categories_r = {
+        "eswiki": re.compile(r'(?im)\[\[\s*Categor(y|ía)\s*:\s*Actualidad\s*[\|\]]'),
+        }
+    #allowed namespaces to analyse
     wanted_namespaces = {
         "eswiki": [0], #main
         }
+    #fields to generate
     fields = [
+        'page_id', 
+        'page_namespace', 
         'page_title', 
+        'page_creator', 
+        'page_creator_type', #ip, registered, unknown
         'page_creation_date', 
-        'template_time_since_creation', 
-        'it_rev_id', #it = inserted template
+        'tag_time_since_creation', 
+        'it_rev_id', #it = inserted tag
         'it_rev_timestamp', 
         'it_rev_username', 
         'it_rev_comment', 
         'event_type', 
-        'rt_rev_id', #rt = removed template
+        'rt_rev_id', #rt = removed tag
         'rt_rev_timestamp', 
         'rt_rev_username', 
         'rt_rev_comment', 
-        'template_duration', 
+        'tag_type', #template, category, both
+        'tag_duration', 
         ]
     dumpfilename = sys.argv[1]
     chunkid = sys.argv[2]
@@ -89,21 +99,29 @@ def main():
     
     #analyse dump
     for page in pages:
-        currentevents = []
         if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted pages
             continue
         print ('Analysing:', page.title.encode('utf-8'))
+        currentevents = []
         pagecount += 1
         if pagecount % 100 == 0:
             print('Analysed',pagecount,'pages')
         #if pagecount > 2000:
         #    fp.kill()
         #    break
-        insertedtemplate = False
+        tagged = False
         revcount = 0
+        page_creator = ''
+        page_creator_type = ''
         pagecreationdate = ''
         for rev in page:
             if revcount == 0:
+                if rev.contributor:
+                    page_creator = rev.contributor.user_text
+                    page_creator_type = int(rev.contributor.id) != 0 and 'registered' or 'ip'
+                else:
+                    page_creator = ''
+                    page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
                 g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 g.writerow([page.title, pagecreationdate.long_format()])
@@ -111,48 +129,60 @@ def main():
             #print (rev.id)
             revtext = True and rev.text or ''
             revcomment = re.sub(r'\n', '', True and rev.comment or '')
-            if re.search(currentevents_r[dumplang], revtext):
-                if insertedtemplate:
-                    pass #template is still in page
+            if re.search(currentevent_templates_r[dumplang], revtext) or re.search(currentevent_categories_r[dumplang], revtext):
+                if tagged:
+                    pass #still is current event
                 else:
-                    #template has been inserted
-                    #skip if article was created >X days ago
-                    template_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
-                    print(page.title.encode('utf-8'), template_time_since_creation)
-                    if template_time_since_creation.days >= limitdays:
-                        break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
+                    #tagged as current event just now
+                    tag_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
+                    print(page.title.encode('utf-8'), tag_time_since_creation)
+                    #if tag_time_since_creation.days >= limitdays: #skip if article was created >X days ago
+                    #    break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
                         
-                    insertedtemplate = rev.timestamp
-                    eventtype = True and re.findall(currentevents_r[dumplang], revtext)[0][2] or 'Unknown'
+                    tagged = rev.timestamp
+                    eventtype = True and re.findall(currentevent_templates_r[dumplang], revtext)[0][2] or 'Unknown'
+                    tag_type = ""
+                    if re.search(currentevent_templates_r[dumplang], revtext):
+                        tag_type = "template"
+                        if re.search(currentevent_categories_r[dumplang], revtext):
+                            tag_type = "both"
+                    elif re.search(currentevent_categories_r[dumplang], revtext):
+                        tag_type = "category"
+
                     currentevent = {
+                        'page_id': page.id, 
+                        'page_namespace': page.namespace, 
                         'page_title': page.title, 
+                        'page_creator': page_creator, 
+                        'page_creator_type': page_creator_type, 
                         'page_creation_date': pagecreationdate.long_format(), 
-                        'template_time_since_creation': str(template_time_since_creation), 
-                        'event_type': eventtype, 
-                        'template_duration': "", 
-                        'it_rev_id': str(rev.id), #it = inserted template
+                        'tag_time_since_creation': str(tag_time_since_creation), 
+                        'it_rev_id': str(rev.id),
                         'it_rev_timestamp': rev.timestamp.long_format(), 
                         'it_rev_username': rev.contributor.user_text, 
                         'it_rev_comment': True and revcomment or "", 
-                        'rt_rev_id': "", #rt = removed template
+                        'event_type': eventtype, 
+                        'rt_rev_id': "",
                         'rt_rev_timestamp': "", 
                         'rt_rev_username': "", 
                         'rt_rev_comment': "", 
+                        'tag_type': tag_type,
+                        'tag_duration': "", 
                     }
                     currentevents.append(currentevent)
             else:
-                if insertedtemplate:
-                    #template has been removed just now
-                    currentevents[-1]['template_duration'] = timediff(insertedtemplate.long_format(), rev.timestamp.long_format())
+                if tagged:
+                    #tag has been removed just now
+                    currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), rev.timestamp.long_format())
                     currentevents[-1]['rt_rev_comment'] = revcomment and revcomment or ""
                     currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
                     currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
                     currentevents[-1]['rt_rev_id'] = str(rev.id)
                     insertedtemplate = False
 
-        if insertedtemplate:
-            #template still as of dumpdate
-            currentevents[-1]['template_duration'] = timediff(insertedtemplate.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        if tagged:
+            #tag still as of dumpdate
+            currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
             #print page.title, currentevents[-1]
     
         f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
