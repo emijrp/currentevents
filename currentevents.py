@@ -104,7 +104,7 @@ def main():
         if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted pages
             continue
         print('Analysing:', page.title)
-        currentevents = []
+        
         pagecount += 1
         if pagecount % 100 == 0:
             print('Analysed',pagecount,'pages')
@@ -112,6 +112,8 @@ def main():
             if dumpfilename.endswith('.7z'):
                 fp.kill()
             break
+        
+        currentevents = []
         tagged = False
         tag_edits = 0
         tag_distinct_editors = set()
@@ -139,13 +141,14 @@ def main():
             revcomment = re.sub(r'\n', '', rev.comment and rev.comment or '')
             if re.search(currentevent_templates_r[dumplang], revtext) or re.search(currentevent_categories_r[dumplang], revtext):
                 if tagged:
+                    #still is current event
                     tag_edits += 1
                     tag_distinct_editors.add(rev_user_text)
-                    pass #still is current event
                 else:
                     #tagged as current event just now
                     tagged = rev.timestamp
                     tag_edits = 1
+                    tag_distinct_editors = set(rev_user_text)
                     tag_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
                     print(page.title, tag_time_since_creation)
                     #if tag_time_since_creation.days >= limitdays: #skip if article was created >X days ago
@@ -187,14 +190,19 @@ def main():
                 if tagged:
                     #tag has been removed just now
                     tag_edits += 1
-                    currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), rev.timestamp.long_format())
-                    currentevents[-1]['rt_rev_comment'] = revcomment and revcomment or ""
-                    currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
-                    currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
+                    tag_distinct_editors.add(rev_user_text)
+                    
                     currentevents[-1]['rt_rev_id'] = str(rev.id)
+                    currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
+                    currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
+                    currentevents[-1]['rt_rev_comment'] = revcomment and revcomment or ""
+                    currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), rev.timestamp.long_format())
                     currentevents[-1]['tag_edits'] = str(tag_edits)
                     currentevents[-1]['tag_distinct_editors'] = len(tag_distinct_editors)
-                    insertedtemplate = False
+                    
+                    tagged = False
+                    tag_edits = 0
+                    tag_distinct_editors = set()
 
         if tagged:
             #tag still as of dumpdate
@@ -202,6 +210,10 @@ def main():
             currentevents[-1]['tag_edits'] = str(tag_edits)
             currentevents[-1]['tag_distinct_editors'] = len(tag_distinct_editors)
             #print page.title, currentevents[-1]
+            
+            tagged = False
+            tag_edits = 0
+            tag_distinct_editors = set()
     
         f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for i in currentevents:
