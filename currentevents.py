@@ -90,7 +90,7 @@ def main():
     #analyse dump
     for page in pages:
         currentevents = []
-        if page.namespace not in wanted_namespaces[dumplang]: #skip unwanted pages
+        if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted pages
             continue
         print ('Analysing:', page.title.encode('utf-8'))
         pagecount += 1
@@ -109,8 +109,8 @@ def main():
                 g.writerow([page.title, pagecreationdate.long_format()])
             revcount += 1
             #print (rev.id)
-            revtext = rev.text and rev.text or ''
-            revcomment = re.sub(r'\n', '', rev.comment and rev.comment or '')
+            revtext = True and rev.text or ''
+            revcomment = re.sub(r'\n', '', True and rev.comment or '')
             if re.search(currentevents_r[dumplang], revtext):
                 if insertedtemplate:
                     pass #template is still in page
@@ -159,6 +159,8 @@ def main():
         for i in currentevents:
             row = [i[field] for field in fields]
             f.writerow(row)
+    
+    print('Finished correctly')
 
 if __name__ == '__main__':
     main()
