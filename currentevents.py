@@ -108,10 +108,10 @@ def main():
         pagecount += 1
         if pagecount % 100 == 0:
             print('Analysed',pagecount,'pages')
-        if pagecount > 2000:
-            if dumpfilename.endswith('.7z'):
-                fp.kill()
-            break
+        #if pagecount > 2000:
+        #    if dumpfilename.endswith('.7z'):
+        #        fp.kill()
+        #    break
         
         currentevents = []
         tagged = False
