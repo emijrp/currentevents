@@ -103,7 +103,7 @@ def main():
     for page in pages:
         if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted pages
             continue
-        print('Analysing:', page.title)
+        print('Analysing:', page.title.encode('utf-8'))
         
         pagecount += 1
         if pagecount % 100 == 0:
@@ -148,11 +148,14 @@ def main():
                     #tagged as current event just now
                     tagged = rev.timestamp
                     tag_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
-                    print(page.title, tag_time_since_creation)
+                    print(page.title.encode('utf-8'), tag_time_since_creation)
                     #if tag_time_since_creation.days >= limitdays: #skip if article was created >X days ago
                     #    break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
-                        
-                    event_type = re.findall(currentevent_templates_r[dumplang], revtext)[0][2] and re.findall(currentevent_templates_r[dumplang], revtext)[0][2] or 'unknown'
+                    
+                    event_type = 'unknown'
+                    if re.search(currentevent_templates_r[dumplang], revtext):
+                        if re.findall(currentevent_templates_r[dumplang], revtext)[0][2]:
+                            event_type = re.findall(currentevent_templates_r[dumplang], revtext)[0][2]
                     tag_type = ""
                     if re.search(currentevent_templates_r[dumplang], revtext):
                         tag_type = "template"
@@ -203,7 +206,7 @@ def main():
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
             currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
-            #print page.title, currentevents[-1]
+            #print page.title.encode('utf-8'), currentevents[-1]
             tagged = False
     
         f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
