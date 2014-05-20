@@ -31,6 +31,7 @@ from mw.xml_dump import Iterator
 #https://es.wikipedia.org/wiki/Plantilla:Evento_actual
 #calcular la duracion media de la plantilla, en total y por tema
 #cuando hay un vandalismo/blanqueo que quita la plantilla y revierten, hace como que quitan y vuelven a meter la plantilla (mejor saltar estas entradas/salidas? comparar el texto de la revid -1 y revid +1 para ver si son iguales)
+#añadir un campo is_redirect al csv de newpages para diferenciar entre articulos y redirecciones
 
 def timediff(start, end):
     t = datetime.datetime.strptime(end, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
@@ -38,14 +39,15 @@ def timediff(start, end):
 
 def main():
     limitdays = 7 #template must be inserted before X days since page creation
-    #current events templates and categories for different wikis
+    #current events templates regexp
     currentevent_templates_r = {
         "eswiki": re.compile(r'(?im)(\{\{\s*(Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*[\|\}]([^\}\n]*?)\}\}?)'),
         }
+    #current events categories regexp
     currentevent_categories_r = {
         "eswiki": re.compile(r'(?im)\[\[\s*Categor(y|ía)\s*:\s*Actualidad\s*[\|\]]'),
         }
-    #allowed namespaces to analyse
+    #namespaces to analyse
     wanted_namespaces = {
         "eswiki": [0], #main
         }
@@ -72,8 +74,10 @@ def main():
         'tag_edits', 
         'tag_distinct_editors', 
         ]
+    #get parameters
     dumpfilename = sys.argv[1]
     chunkid = sys.argv[2]
+    #input can be compressed or plain xml
     if dumpfilename.endswith('.7z'):
         fp = subprocess.Popen('7za e -bd -so %s 2>/dev/null' % dumpfilename, shell=True, stdout=subprocess.PIPE, bufsize=65535)
         pages = Iterator.from_file(fp.stdout)
@@ -90,7 +94,7 @@ def main():
     dumpdate = datetime.datetime.strptime(dumpfilename.split('/')[-1].split('-')[1], '%Y%m%d')
     pagecount = 0
     
-    #start CSV
+    #blank CSV
     f = open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
     f.write('%s\n' % ('|'.join(fields)))
     f.close()
@@ -101,7 +105,7 @@ def main():
     
     #analyse dump
     for page in pages:
-        if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted pages
+        if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted namespaces
             continue
         print('Analysing:', page.title.encode('utf-8'))
         
@@ -115,8 +119,6 @@ def main():
         
         currentevents = []
         tagged = False
-        tag_edits = 0
-        tag_distinct_editors = set([])
         revcount = 0
         page_creator = ''
         page_creator_type = ''
