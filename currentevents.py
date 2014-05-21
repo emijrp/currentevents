@@ -41,10 +41,12 @@ def main():
     limitdays = 7 #template must be inserted before X days since page creation
     #current events templates regexp
     currentevent_templates_r = {
+        #"enwiki": re.compile(r'(?im)(\{\{\s*()\s*[\|\}]([^\}\n]*?)\}\}?)'),
         "eswiki": re.compile(r'(?im)(\{\{\s*(Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*[\|\}]([^\}\n]*?)\}\}?)'),
         }
     #current events categories regexp
     currentevent_categories_r = {
+        "enwiki": re.compile(r'(?im)\[\[\s*Category\s*:\s*Current[ _]events\s*[\|\]]'),
         "eswiki": re.compile(r'(?im)\[\[\s*Categor(y|ía)\s*:\s*Actualidad\s*[\|\]]'),
         }
     #namespaces to analyse
@@ -59,17 +61,17 @@ def main():
         'page_creator', 
         'page_creator_type', #ip, registered, unknown
         'page_creation_date', 
-        'tag_time_since_creation', 
         'it_rev_id', #it = inserted tag
         'it_rev_timestamp', 
         'it_rev_username', 
         'it_rev_comment', 
-        'event_type', 
         'rt_rev_id', #rt = removed tag
         'rt_rev_timestamp', 
         'rt_rev_username', 
         'rt_rev_comment', 
         'tag_type', #template, category, both
+        'tag_string', 
+        'tag_time_since_creation', 
         'tag_duration', 
         'tag_edits', 
         'tag_distinct_editors', 
@@ -101,7 +103,7 @@ def main():
     f.close()
     #blank newpages
     g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
-    g.write('page_namespace|page_title|page_creation_date|page_is_redirect\n')
+    g.write('page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n')
     g.close()
     
     #analyse dump
@@ -135,7 +137,7 @@ def main():
                     page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
                 g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                g.writerow([page.namespace, page.title, pagecreationdate.long_format(), page_is_redirect])
+                g.writerow([page.id, page.namespace, page.title, pagecreationdate.long_format(), page_creator, page_is_redirect])
             revcount += 1
             #print (rev.id)
             rev_user_text = ''
@@ -156,10 +158,14 @@ def main():
                     #if tag_time_since_creation.days >= limitdays: #skip if article was created >X days ago
                     #    break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
                     
-                    event_type = 'unknown'
+                    tag_string = 'unknown'
                     if re.search(currentevent_templates_r[dumplang], revtext):
-                        if re.findall(currentevent_templates_r[dumplang], revtext)[0][2]:
-                            event_type = re.findall(currentevent_templates_r[dumplang], revtext)[0][2]
+                        #unify a bit the tag, to ease comparison later
+                        tag_string = re.findall(currentevent_templates_r[dumplang], revtext)[0][0].lower().strip()
+                        tag_string = re.sub(r'_', r' ', tag_string)
+                        tag_string = re.sub(r'\{\{\s+', r'{{', tag_string)
+                        tag_string = re.sub(r'\s+\}\}', r'}}', tag_string)
+                        tag_string = re.sub(r'\s*\|\s*', r'|', tag_string)
                     tag_type = ""
                     if re.search(currentevent_templates_r[dumplang], revtext):
                         tag_type = "template"
@@ -175,20 +181,20 @@ def main():
                         'page_creator': page_creator, 
                         'page_creator_type': page_creator_type, 
                         'page_creation_date': pagecreationdate.long_format(), 
-                        'tag_time_since_creation': str(tag_time_since_creation), 
                         'it_rev_id': str(rev.id),
                         'it_rev_timestamp': rev.timestamp.long_format(), 
                         'it_rev_username': rev.contributor.user_text, 
                         'it_rev_comment': revcomment and revcomment or "", 
-                        'event_type': event_type, 
                         'rt_rev_id': "",
                         'rt_rev_timestamp': "", 
                         'rt_rev_username': "", 
                         'rt_rev_comment': "", 
                         'tag_type': tag_type,
+                        'tag_string': tag_string, 
+                        'tag_time_since_creation': str(tag_time_since_creation), 
                         'tag_duration': "", 
-                        'tag_edits': 1, 
-                        'tag_distinct_editors': set([rev_user_text]), 
+                        'tag_edits': 1, #counter to increment
+                        'tag_distinct_editors': set([rev_user_text]), #set of unique editors
                     }
                     currentevents.append(currentevent)
             else:
