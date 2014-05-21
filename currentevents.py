@@ -79,7 +79,8 @@ def main():
     chunkid = sys.argv[2]
     #input can be compressed or plain xml
     if dumpfilename.endswith('.7z'):
-        fp = subprocess.Popen('7za e -bd -so %s 2>/dev/null' % dumpfilename, shell=True, stdout=subprocess.PIPE, bufsize=65535)
+        #7za or 7zr are valid
+        fp = subprocess.Popen('7zr e -bd -so %s 2>/dev/null' % dumpfilename, shell=True, stdout=subprocess.PIPE, bufsize=65535)
         pages = Iterator.from_file(fp.stdout)
     elif dumpfilename.endswith('.bz2'):
         import bz2
@@ -100,7 +101,7 @@ def main():
     f.close()
     #blank newpages
     g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
-    g.write('page_title|page_creation_date\n')
+    g.write('page_namespace|page_title|page_creation_date|page_is_redirect\n')
     g.close()
     
     #analyse dump
@@ -123,6 +124,7 @@ def main():
         page_creator = ''
         page_creator_type = ''
         pagecreationdate = ''
+        page_is_redirect = page.redirect and 'True' or 'False'
         for rev in page:
             if revcount == 0:
                 if rev.contributor:
@@ -133,7 +135,7 @@ def main():
                     page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
                 g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                g.writerow([page.title, pagecreationdate.long_format()])
+                g.writerow([page.namespace, page.title, pagecreationdate.long_format(), page_is_redirect])
             revcount += 1
             #print (rev.id)
             rev_user_text = ''
