@@ -94,7 +94,7 @@ def main():
     
     #get dump language and date
     dumplang = dumpfilename.split('/')[-1].split('-')[0]
-    dumpdate = datetime.datetime.strptime(dumpfilename.split('/')[-1].split('-')[1], '%Y%m%d')
+    dumpdate = datetime.datetime.strptime('%s 23:59:59' % (dumpfilename.split('/')[-1].split('-')[1]), '%Y%m%d %H:%M:%S')
     pagecount = 0
     
     #blank CSV
