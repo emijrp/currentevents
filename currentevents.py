@@ -41,19 +41,22 @@ def main():
     limitdays = 7 #template must be inserted before X days since page creation
     #current events templates regexp
     currentevent_templates_r = {
-        "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*[^\{\}\n]*?\s*\}\})'), 
-        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]?disaster|Current[ _]election|Current[ _]?events?|Current[ _]news|Current[ _]paragraph|Current[ _]?person|Current[ _]?related|Currentsect|Current[ _]section|Current[ _]spaceflight|Current[ _]?sport|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak|Current[ _]tropical[ _]cyclone|Current[ _]war|Currentwarfare|Flux|Live|Developing|Developingstory|Ongoing[ _]election|Ongoing[ _]event|Recent[ _]?death|Recent[ _]death[ _]presumed|Recent[ _]?event|Recent[ _]related)\s*[^\{\}\n]*?\s*\}\})'),
-        "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*[^\{\}\n]*?\s*\}\})'), 
+        "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
+        "dewiki": re.compile(r'(?im)(\{\{\s*(?:Laufendes[ _]Ereignis|Laufende[ _]Veranstaltung|Aktuelles[ _]Ereignis)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
+        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]?disaster|Current[ _]election|Current[ _]?events?|Current[ _]news|Current[ _]paragraph|Current[ _]?person|Current[ _]?related|Currentsect|Current[ _]section|Current[ _]spaceflight|Current[ _]?sport|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak|Current[ _]tropical[ _]cyclone|Current[ _]war|Currentwarfare|Flux|Live|Developing|Developingstory|Ongoing[ _]election|Ongoing[ _]event|Recent[ _]?death|Recent[ _]death[ _]presumed|Recent[ _]?event|Recent[ _]related)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'),
+        "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
         }
     #current events categories regexp
     currentevent_categories_r = {
-        "cawiki": re.compile(r'(?im)\[\[\s*(Categoria|Category)\s*:\s*Articles[ _]d\'actualitat\s*[\|\]]'),
+        "cawiki": re.compile(r'(?im)\[\[\s*(?:Categoria|Category)\s*:\s*Articles[ _]d\'actualitat\s*[\|\]]'),
+        "dewiki": re.compile(r'(?im)\[\[\s*(?:Kategorie|Category)\s*:\s*Wikipedia:Laufendes[ _]Ereignis\s*[\|\]]'),
         "enwiki": re.compile(r'(?im)\[\[\s*Category\s*:\s*Current[ _]events\s*[\|\]]'),
-        "eswiki": re.compile(r'(?im)\[\[\s*Categor(y|ía)\s*:\s*Actualidad\s*[\|\]]'),
+        "eswiki": re.compile(r'(?im)\[\[\s*(?:Categoría|Category)\s*:\s*Actualidad\s*[\|\]]'),
         }
     #namespaces to analyse
     wanted_namespaces = {
         "cawiki": [0], #main
+        "dewiki": [0], #main
         "enwiki": [0], #main
         "eswiki": [0], #main
         }
