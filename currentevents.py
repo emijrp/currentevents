@@ -41,9 +41,9 @@ def main():
     limitdays = 7 #template must be inserted before X days since page creation
     #current events templates regexp
     currentevent_templates_r = {
-        "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*(?:\|[^\|\}\n]+?)?\s*\}\})'), 
-        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]event|Flux|Live|Current[ _]disaster|Current[ _]related|Current[ _]person|Current[ _]spaceflight|Current[ _]sport|Recent[ _]death|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak)\s*(?:\|[^\|\}\n]+?)?\s*\}\})'),
-        "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*(?:\|[^\|\}\n]+?)?\s*\}\})'), 
+        "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*[^\{\}\n]*?\s*\}\})'), 
+        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]?disaster|Current[ _]election|Current[ _]?events?|Current[ _]news|Current[ _]paragraph|Current[ _]?person|Current[ _]?related|Currentsect|Current[ _]section|Current[ _]spaceflight|Current[ _]?sport|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak|Current[ _]tropical[ _]cyclone|Current[ _]war|Currentwarfare|Flux|Live|Developing|Developingstory|Ongoing[ _]election|Ongoing[ _]event|Recent[ _]?death|Recent[ _]death[ _]presumed|Recent[ _]?event|Recent[ _]related)\s*[^\{\}\n]*?\s*\}\})'),
+        "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*[^\{\}\n]*?\s*\}\})'), 
         }
     #current events categories regexp
     currentevent_categories_r = {
@@ -170,6 +170,8 @@ def main():
                         tag_string = re.sub(r'\{\{\s+', r'{{', tag_string)
                         tag_string = re.sub(r'\s+\}\}', r'}}', tag_string)
                         tag_string = re.sub(r'\s*\|\s*', r'|', tag_string)
+                        tag_string = re.sub(r'\n', r'', tag_string)
+                        tag_string = re.sub(r'\|\|+', r'|', tag_string)
                         tag_string = re.sub(r'(?i)\|\s*date\s*\=\s*[A-Za-z0-9 ]+', r'', tag_string) #remove |date=May 2014 in English WP
                     tag_type = ""
                     if re.search(currentevent_templates_r[dumplang], revtext):
