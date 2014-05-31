@@ -5,7 +5,7 @@
 #$3 is format: bz2, 7z, ...
 
 shopt -s nullglob
-dumps=(/data/project/currentevents/dumps/$1/$2/$1-$2-pages-meta-history*.xml.$3)
+dumps=(/data/project/currentevents/dumps/$1/$2/$1-$2-pages-meta-history*.xml*.$3)
 c=1
 
 for dump in "${dumps[@]}"
