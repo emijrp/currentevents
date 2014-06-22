@@ -82,7 +82,22 @@ def main():
         'tag_duration', 
         'tag_edits', 
         'tag_distinct_editors', 
+        #'maintenance_templates', #templates for maintenance during current event
+        'diff_links', 
+        'diff_extlinks', 
+        'diff_refs', 
+        'diff_templates', 
         ]
+    #maintenance templates
+    maintenance_templates_r = {
+        "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actualizar|Ampliación[ _]propuesta|Archivo|Artículo[ _]indirecto/esbozo|Artículo[ _]infraesbozo|Autotrad|Aviso[ _]infraesbozo|Bulo|Cita[ _]requerida|Complejo|Contextualizar|Copyedit|Copyvio|Curiosidades|Desactualizado|Desambiguación|Destruir|Discusión[ _]sosegada|Discutido|En[ _]desarrollo|En[ _]uso|Evento[ _]actual|Evento[ _]futuro|Excesivamente[ _]detallado|Ficticio|Formato[ _]de[ _]cita|FP|Fuentes[ _]no[ _]fiables|Fuente[ _]primaria|Fusionando|Fusionar|Fusionar[ _]desde|Fusionar[ _]en|Infraesbozo|Irrelevante|Largo|Mal[ _]traducido|Mejorar[ _]redacción|No[ _]es[ _]un[ _]foro|No[ _]neutralidad|Página[ _]bloqueada|Plagio|Plagio[ _]externo|Polémico|Posible[ _]copyvio|Posible[ _]fusionar|Problemas[ _]artículo|Promocional|Publicidad|PVfan|Reducido|Referencias|Referencias[ _]adicionales|Renombrar|Revisar[ _]traducción|Separado[ _]de|Separar|Sin[ _]?relevancia|SRA|Traducción|Traducido[ _]de|Transferir[ _]a|Wikificar)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'),
+    }
+    #regexps for counts
+    links_r = re.compile(r'(?im)(\[\[[^\[\]\r\n]+\]\])') # [[..|?..]]
+    extlinks_r = re.compile(r'(?im)(://)') # ://
+    refs_r = re.compile(r'(?im)< */ *ref *>') # </ref>
+    templates_r = re.compile(r'(?im)((?:^|[^\{\}])\{\{[^\{\}])') # {{
+    
     #get parameters
     dumpfilename = sys.argv[1]
     chunkid = sys.argv[2]
@@ -183,7 +198,7 @@ def main():
                             tag_type = "both"
                     elif re.search(currentevent_categories_r[dumplang], revtext):
                         tag_type = "category"
-
+                    
                     currentevent = {
                         'page_id': str(page.id), 
                         'page_namespace': str(page.namespace), 
@@ -205,6 +220,10 @@ def main():
                         'tag_duration': "", 
                         'tag_edits': 1, #counter to increment
                         'tag_distinct_editors': set([rev_user_text]), #set of unique editors
+                        'diff_links': len(re.findall(links_r, revtext)), 
+                        'diff_extlinks': len(re.findall(extlinks_r, revtext)), 
+                        'diff_refs': len(re.findall(refs_r, revtext)), 
+                        'diff_templates': len(re.findall(templates_r, revtext)), 
                     }
                     currentevents.append(currentevent)
             else:
@@ -218,6 +237,10 @@ def main():
                     currentevents[-1]['tag_edits'] += 1
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
                     currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
+                    currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
+                    currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
+                    currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
+                    currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
                     tagged = False
 
         if tagged:
@@ -226,6 +249,10 @@ def main():
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
             currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
+            currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
+            currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
+            currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
+            currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
             #print page.title.encode('utf-8'), currentevents[-1]
             tagged = False
     
