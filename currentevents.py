@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2014 emijrp <emijrp@gmail.com>
+# Copyright (C) 2014-2015 emijrp <emijrp@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -104,7 +104,7 @@ def main():
     #input can be compressed or plain xml
     if dumpfilename.endswith('.7z'):
         #7za or 7zr are valid
-        fp = subprocess.Popen('7zr e -bd -so %s 2>/dev/null' % dumpfilename, shell=True, stdout=subprocess.PIPE, bufsize=65535)
+        fp = subprocess.Popen('7za e -bd -so %s 2>/dev/null' % dumpfilename, shell=True, stdout=subprocess.PIPE, bufsize=65535)
         pages = Iterator.from_file(fp.stdout)
     elif dumpfilename.endswith('.bz2'):
         import bz2
@@ -119,24 +119,28 @@ def main():
     dumpdate = datetime.datetime.strptime('%s 23:59:59' % (dumpfilename.split('/')[-1].split('-')[1]), '%Y%m%d %H:%M:%S')
     pagecount = 0
     
-    #blank CSV
-    f = open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
-    f.write('%s\n' % ('|'.join(fields)))
+    #blank CSV currentevents
+    f = open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w', encoding='utf-8')
+    output = '{0}\n'.format('|'.join(fields))
+    f.write(output)
     f.close()
-    #blank newpages
-    g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w')
-    g.write('page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n')
+    #blank CSV newpages
+    g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w', encoding='utf-8')
+    output = 'page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n'
+    g.write(output)
     g.close()
     
     #analyse dump
     for page in pages:
         if int(page.namespace) not in wanted_namespaces[dumplang]: #skip unwanted namespaces
             continue
-        print('Analysing:', page.title.encode('utf-8'))
+        msg = 'Analysing: {0}'.format(page.title)
+        print(msg.encode('utf-8'))
         
         pagecount += 1
         if pagecount % 100 == 0:
-            print('Analysed',pagecount,'pages')
+            msg = 'Analysed {0} pages'.format(pagecount)
+            print(msg.encode('utf-8'))
         #if pagecount > 2000:
         #    if dumpfilename.endswith('.7z'):
         #        fp.kill()
@@ -158,7 +162,7 @@ def main():
                     page_creator = ''
                     page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
-                g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 g.writerow([page.id, page.namespace, page.title, pagecreationdate.long_format(), page_creator, page_is_redirect])
             revcount += 1
             #print (rev.id)
@@ -256,7 +260,7 @@ def main():
             #print page.title.encode('utf-8'), currentevents[-1]
             tagged = False
     
-        f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for i in currentevents:
             row = [i[field] for field in fields]
             f.writerow(row)
