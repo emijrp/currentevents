@@ -120,12 +120,14 @@ def main():
     pagecount = 0
     
     #blank CSV currentevents
-    f = open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w', encoding='utf-8')
+    filename = 'currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+    f = open(filename, 'w', encoding='utf-8')
     output = '{0}\n'.format('|'.join(fields))
     f.write(output)
     f.close()
     #blank CSV newpages
-    g = open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'w', encoding='utf-8')
+    filename = 'newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+    g = open(filename, 'w', encoding='utf-8')
     output = 'page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n'
     g.write(output)
     g.close()
@@ -153,6 +155,7 @@ def main():
         page_creator_type = ''
         pagecreationdate = ''
         page_is_redirect = page.redirect and 'True' or 'False'
+        temp = {} # to detect wrongly removed templates
         for rev in page:
             if revcount == 0:
                 if rev.contributor:
@@ -162,7 +165,8 @@ def main():
                     page_creator = ''
                     page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
-                g = csv.writer(open('newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                filename = 'newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+                g = csv.writer(open(filename, 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 g.writerow([page.id, page.namespace, page.title, pagecreationdate.long_format(), page_creator, page_is_redirect])
             revcount += 1
             #print (rev.id)
@@ -178,6 +182,16 @@ def main():
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
                 else:
                     #tagged as current event just now
+                    if temp:
+                        if timediff(temp['rt_rev_timestamp'].long_format(), rev.timestamp.long_format()).days < 2:
+                            #if it was current event less than X days before, then the template was wrongly removed
+                            currentevents[-1] = temp.copy()
+                            currentevents[-1]['tag_edits'] += 1
+                            currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
+                            temp = {}
+                            tagged = currentevents[-1]['it_rev_timestamp']
+                            continue
+                    
                     tagged = rev.timestamp
                     tag_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
                     print(page.title.encode('utf-8'), tag_time_since_creation)
@@ -209,9 +223,9 @@ def main():
                         'page_title': page.title, 
                         'page_creator': page_creator, 
                         'page_creator_type': page_creator_type, 
-                        'page_creation_date': pagecreationdate.long_format(), 
+                        'page_creation_date': pagecreationdate, 
                         'it_rev_id': str(rev.id),
-                        'it_rev_timestamp': rev.timestamp.long_format(), 
+                        'it_rev_timestamp': rev.timestamp, 
                         'it_rev_username': rev.contributor.user_text, 
                         'it_rev_comment': revcomment and revcomment or "", 
                         'rt_rev_id': "",
@@ -233,6 +247,12 @@ def main():
             else:
                 if tagged:
                     #tag has been removed just now
+                    
+                    temp = currentevents[-1].copy() #saving temporaly to check if it is added again shortly
+                    temp['rt_rev_timestamp'] = rev.timestamp
+                    
+                    currentevents[-1]['page_creation_date'] = currentevents[-1]['page_creation_date'].long_format()
+                    currentevents[-1]['it_rev_timestamp'] = currentevents[-1]['it_rev_timestamp'].long_format()
                     currentevents[-1]['rt_rev_id'] = str(rev.id)
                     currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
                     currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
@@ -246,9 +266,16 @@ def main():
                     currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
                     currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
                     tagged = False
+                else:
+                    if temp:
+                        #keep temp updated
+                        temp['tag_edits'] += 1
+                        temp['tag_distinct_editors'].add(rev_user_text) 
 
         if tagged:
-            #tag still as of dumpdate
+            #tagged still as of dumpdate
+            currentevents[-1]['page_creation_date'] = currentevents[-1]['page_creation_date'].long_format()
+            currentevents[-1]['it_rev_timestamp'] = currentevents[-1]['it_rev_timestamp'].long_format()
             currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
@@ -260,7 +287,8 @@ def main():
             #print page.title.encode('utf-8'), currentevents[-1]
             tagged = False
     
-        f = csv.writer(open('currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid), 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        filename = 'currentevents-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+        f = csv.writer(open(filename, 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for i in currentevents:
             row = [i[field] for field in fields]
             f.writerow(row)
