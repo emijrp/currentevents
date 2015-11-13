@@ -28,10 +28,7 @@ import sys
 
 from mw.xml_dump import Iterator
 
-#https://es.wikipedia.org/wiki/Plantilla:Evento_actual
 #calcular la duracion media de la plantilla, en total y por tema
-#cuando hay un vandalismo/blanqueo que quita la plantilla y revierten, hace como que quitan y vuelven a meter la plantilla (mejor saltar estas entradas/salidas? comparar el texto de la revid -1 y revid +1 para ver si son iguales)
-#añadir un campo is_redirect al csv de newpages para diferenciar entre articulos y redirecciones
 
 def timediff(start, end):
     t = datetime.datetime.strptime(end, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
