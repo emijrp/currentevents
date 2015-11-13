@@ -37,13 +37,18 @@ def timediff(start, end):
     t = datetime.datetime.strptime(end, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
     return t
 
+def timediffinhours(start, end):
+    t = timediff(start, end)
+    t = t.days * 24 + round(t.seconds/3600, 1)
+    return t
+
 def main():
     limitdays = 7 #template must be inserted before X days since page creation
     #current events templates regexp
     currentevent_templates_r = {
         "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
         "dewiki": re.compile(r'(?im)(\{\{\s*(?:Laufendes[ _]Ereignis|Laufende[ _]Veranstaltung|Aktuelles[ _]Ereignis)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
-        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]?disaster|Current[ _]election|Current[ _]?events?|Current[ _]news|Current[ _]paragraph|Current[ _]?person|Current[ _]?related|Currentsect|Current[ _]section|Current[ _]spaceflight|Current[ _]?sport|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak|Current[ _]tropical[ _]cyclone|Current[ _]war|Currentwarfare|Flux|Live|Developing|Developingstory|Ongoing[ _]election|Ongoing[ _]event|Recent[ _]?death|Recent[ _]death[ _]presumed|Recent[ _]?event|Recent[ _]related)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'),
+        "enwiki": re.compile(r'(?im)(\{\{\s*(?:Current|Current[ _]antics|Current[ _]?disaster|Current[ _]election|Current[ _]?events?|Current[ _]news|Current[ _]paragraph|Current[ _]?person|Current[ _-]?related|Currentsect|Current[ _-]?section|Current[ _]spaceflight|Current[ _]?sport|Current[ _]sport-related|Current[ _]sports[ _]transaction|Current[ _]tornado[ _]outbreak|Current[ _]tropical[ _]cyclone|Current[ _]war|Currentwarfare|Flux|Live|Developing|Developingstory|Ongoing[ _]election|Ongoing[ _]event|Recent[ _]?death|Recent[ _]death[ _]presumed|Recent[ _]?event|Recent[ _]news|Recent[ _]related|Related[ _]current)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'),
         "eswiki": re.compile(r'(?im)(\{\{\s*(?:Actual|Actualidad|Actualidad[ _]deporte|Current|EA|Evento[ _]actual|Launching|Muerte[ _]reciente|Sencillo[ _]actual|Single[ _]actual|Telenovela[ _]en[ _]emisión|Teleserie[ _]en[ _]emisión)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
         }
     #current events categories regexp
@@ -58,7 +63,7 @@ def main():
         "cawiki": [0], #main
         "dewiki": [0], #main
         "enwiki": [0], #main
-        "eswiki": [0], #main
+        "eswiki": [0, 104], #main, anexo
         }
     #fields to generate
     fields = [
@@ -78,8 +83,8 @@ def main():
         'rt_rev_comment', 
         'tag_type', #template, category, both
         'tag_string', 
-        'tag_time_since_creation', 
-        'tag_duration', 
+        'tag_time_since_creation_(hours)', 
+        'tag_duration_(hours)', 
         'tag_edits', 
         'tag_distinct_editors', 
         #'maintenance_templates', #templates for maintenance during current event
@@ -183,7 +188,7 @@ def main():
                 else:
                     #tagged as current event just now
                     if temp:
-                        if timediff(temp['rt_rev_timestamp'].long_format(), rev.timestamp.long_format()).days < 2:
+                        if timediffinhours(temp['rt_rev_timestamp'].long_format(), rev.timestamp.long_format()) <= 24 * 2:
                             #if it was current event less than X days before, then the template was wrongly removed
                             currentevents[-1] = temp.copy()
                             currentevents[-1]['tag_edits'] += 1
@@ -193,10 +198,8 @@ def main():
                             continue
                     
                     tagged = rev.timestamp
-                    tag_time_since_creation = timediff(pagecreationdate.long_format(), rev.timestamp.long_format())
+                    tag_time_since_creation = timediffinhours(pagecreationdate.long_format(), rev.timestamp.long_format())
                     print(page.title.encode('utf-8'), tag_time_since_creation)
-                    #if tag_time_since_creation.days >= limitdays: #skip if article was created >X days ago
-                    #    break #we are in a date in history that is away >limitdays from page creation, so skip this page, no more to see here
                     
                     tag_string = 'unknown'
                     if re.search(currentevent_templates_r[dumplang], revtext):
@@ -234,8 +237,8 @@ def main():
                         'rt_rev_comment': "", 
                         'tag_type': tag_type,
                         'tag_string': tag_string, 
-                        'tag_time_since_creation': str(tag_time_since_creation), 
-                        'tag_duration': "", 
+                        'tag_time_since_creation_(hours)': str(tag_time_since_creation), 
+                        'tag_duration_(hours)': "", 
                         'tag_edits': 1, #counter to increment
                         'tag_distinct_editors': set([rev_user_text]), #set of unique editors
                         'diff_links': len(re.findall(links_r, revtext)), 
@@ -257,7 +260,7 @@ def main():
                     currentevents[-1]['rt_rev_timestamp'] = rev.timestamp.long_format()
                     currentevents[-1]['rt_rev_username'] = rev.contributor.user_text
                     currentevents[-1]['rt_rev_comment'] = revcomment and revcomment or ""
-                    currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), rev.timestamp.long_format())
+                    currentevents[-1]['tag_duration_(hours)'] = timediffinhours(tagged.long_format(), rev.timestamp.long_format())
                     currentevents[-1]['tag_edits'] += 1
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
                     currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
@@ -276,7 +279,7 @@ def main():
             #tagged still as of dumpdate
             currentevents[-1]['page_creation_date'] = currentevents[-1]['page_creation_date'].long_format()
             currentevents[-1]['it_rev_timestamp'] = currentevents[-1]['it_rev_timestamp'].long_format()
-            currentevents[-1]['tag_duration'] = timediff(tagged.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            currentevents[-1]['tag_duration_(hours)'] = timediffinhours(tagged.long_format(), dumpdate.strftime("%Y-%m-%dT%H:%M:%SZ"))
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
             currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
