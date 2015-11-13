@@ -92,6 +92,7 @@ def main():
         'diff_extlinks', 
         'diff_refs', 
         'diff_templates', 
+        'diff_images', 
         ]
     #maintenance templates
     maintenance_templates_r = {
@@ -102,6 +103,7 @@ def main():
     extlinks_r = re.compile(r'(?im)(://)') # ://
     refs_r = re.compile(r'(?im)< */ *ref *>') # </ref>
     templates_r = re.compile(r'(?im)((?:^|[^\{\}])\{\{[^\{\}])') # {{
+    images_r = re.compile(r'(?im)\[\[\s*(File|Image|Fitxer|Imatge|Datei|Bild|Archivo|Imagen)\s*:')
     
     #get parameters
     dumpfilename = sys.argv[1]
@@ -130,8 +132,8 @@ def main():
     output = '{0}\n'.format('|'.join(fields))
     f.write(output)
     f.close()
-    #blank CSV newpages
-    filename = 'newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+    #blank CSV pages
+    filename = 'pages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
     g = open(filename, 'w', encoding='utf-8')
     output = 'page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n'
     g.write(output)
@@ -170,7 +172,7 @@ def main():
                     page_creator = ''
                     page_creator_type = 'unknown'
                 pagecreationdate = rev.timestamp
-                filename = 'newpages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
+                filename = 'pages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
                 g = csv.writer(open(filename, 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 g.writerow([page.id, page.namespace, page.title, pagecreationdate.long_format(), page_creator, page_is_redirect])
             revcount += 1
@@ -245,6 +247,7 @@ def main():
                         'diff_extlinks': len(re.findall(extlinks_r, revtext)), 
                         'diff_refs': len(re.findall(refs_r, revtext)), 
                         'diff_templates': len(re.findall(templates_r, revtext)), 
+                        'diff_images': len(re.findall(images_r, revtext)), 
                     }
                     currentevents.append(currentevent)
             else:
@@ -268,6 +271,7 @@ def main():
                     currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
                     currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
                     currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
+                    currentevents[-1]['diff_images'] = len(re.findall(images_r, revtext)) - currentevents[-1]['diff_images']
                     tagged = False
                 else:
                     if temp:
@@ -287,6 +291,7 @@ def main():
             currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
             currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
             currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
+            currentevents[-1]['diff_images'] = len(re.findall(images_r, revtext)) - currentevents[-1]['diff_images']
             #print page.title.encode('utf-8'), currentevents[-1]
             tagged = False
     
