@@ -85,11 +85,13 @@ def main():
         'tag_edits', 
         'tag_distinct_editors', 
         #'maintenance_templates', #templates for maintenance during current event
+        'diff_len', 
         'diff_links', 
         'diff_extlinks', 
         'diff_refs', 
         'diff_templates', 
         'diff_images', 
+        #ideas: diff_sections
         ]
     #maintenance templates
     maintenance_templates_r = {
@@ -132,7 +134,7 @@ def main():
     #blank CSV pages
     filename = 'pages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
     g = open(filename, 'w', encoding='utf-8')
-    output = 'page_id|page_namespace|page_title|page_creation_date|page_creator|page_is_redirect\n'
+    output = 'page_id|page_namespace|page_title|page_creation_rev_id|page_creation_date|page_creator|page_is_redirect\n'
     g.write(output)
     g.close()
     
@@ -171,7 +173,7 @@ def main():
                 pagecreationdate = rev.timestamp
                 filename = 'pages-%s-%s.csv.%s' % (dumplang, dumpdate.strftime('%Y%m%d'), chunkid)
                 g = csv.writer(open(filename, 'a', encoding='utf-8'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                g.writerow([page.id, page.namespace, page.title, pagecreationdate.long_format(), page_creator, page_is_redirect])
+                g.writerow([page.id, page.namespace, page.title, rev.id, pagecreationdate.long_format(), page_creator, page_is_redirect])
             revcount += 1
             #print (rev.id)
             rev_user_text = ''
@@ -240,6 +242,7 @@ def main():
                         'tag_duration_(hours)': "", 
                         'tag_edits': 1, #counter to increment
                         'tag_distinct_editors': set([rev_user_text]), #set of unique editors
+                        'diff_len': len(revtext), 
                         'diff_links': len(re.findall(links_r, revtext)), 
                         'diff_extlinks': len(re.findall(extlinks_r, revtext)), 
                         'diff_refs': len(re.findall(refs_r, revtext)), 
@@ -264,6 +267,7 @@ def main():
                     currentevents[-1]['tag_edits'] += 1
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
                     currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
+                    currentevents[-1]['diff_len'] = len(revtext) - currentevents[-1]['diff_len']
                     currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
                     currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
                     currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
@@ -284,6 +288,7 @@ def main():
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
             currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
+            currentevents[-1]['diff_len'] = len(revtext) - currentevents[-1]['diff_len']
             currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
             currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
             currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
