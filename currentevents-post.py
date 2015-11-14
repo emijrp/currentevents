@@ -113,6 +113,7 @@ def main():
             pages[k] = v
     print('Loaded',len(pages.items()),'pages')
     
+    #dict for stats
     num2namespace = {
         'eswiki': {0:'Principal', 104:'Anexo'}, 
     }
@@ -146,6 +147,9 @@ def main():
     d['redirectspercent'] = round(d['totalredirects']/(d['totalpages']/100), 1)
     d['usefulpagespercent'] = round(d['totalusefulpages']/(d['totalpages']/100), 1)
     
+    #csvlinks
+    d['csvlinks'] = ''
+    
     #oldest & newest current events
     for k, v in currentevents.items():
         if v['it_rev_timestamp'] < d['oldestcurrenteventdate']:
@@ -173,7 +177,21 @@ def main():
             d['newestpagetitle'] = v['page_title']
             d['newestpagecreationdate'] = v['page_creation_date']
             d['newestpagecreator'] = v['page_creator']
-
+    
+    #stats by year
+    stats_by_year = {}
+    for k, v in currentevents.items():
+        year = int(v['it_rev_timestamp'].split('-')[0])
+        if year in stats_by_year:
+            stats_by_year[year]['currentevents'] += 1
+            stats_by_year[year]['articles'].add(v['page_id'])
+        else:
+            stats_by_year[year] = {'currentevents': 1, 'articles': set([v['page_id']])}
+    stats_by_year = [[k, v] for k, v in stats_by_year.items()]
+    stats_by_year.sort()
+    stats_by_year = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>".format(k, v['currentevents'], len(v['articles'])) for k, v in stats_by_year])
+    d['stats_by_year'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos</th><th>Artículos</th>\n{0}\n</table>".format(stats_by_year)
+    
     html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -186,6 +204,9 @@ def main():
     <p>Este análisis corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>.
     
     <p>Se ha generado en X horas.</p>
+    <ul>
+        $csvlinks
+    </ul>
     
     <p>Resumen general:</p>
     <ul>
@@ -203,8 +224,10 @@ def main():
         </ul>
     </ul>
     
+    $stats_by_year
+    
+    
     <!--
-    Current events por años
     Tipos de eventos más frecuentes
     Páginas que han recibido más eventos
     Páginas más editadas o con más editores durante eventos
