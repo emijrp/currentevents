@@ -24,13 +24,13 @@ import sys
 def loadCurrentEventsCSV(csvfile):
     c = 0
     f = csv.reader(open(csvfile, 'r'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    l = []
+    d = {}
     for row in f:
         if c == 0:
             c += 1
             continue
         
-        d = {
+        d[int(row[6])] = {
             'page_id': int(row[0]),
             'page_namespace': int(row[1]),
             'page_title': row[2],
@@ -51,37 +51,37 @@ def loadCurrentEventsCSV(csvfile):
             'tag_duration': row[17],
             'tag_edits': int(row[18]),
             'tag_distinct_editors': int(row[19]),
-            'diff_links': int(row[20]),
-            'diff_extlinks': int(row[21]),
-            'diff_refs':  int(row[22]),
-            'diff_templates': int(row[23]),
+            'diff_len': int(row[20]),
+            'diff_links': int(row[21]),
+            'diff_extlinks': int(row[22]),
+            'diff_refs':  int(row[23]),
+            'diff_templates': int(row[24]),
+            'diff_images': int(row[25]),
         }
-        l.append(d)
         c += 1
     
-    return l
+    return d
 
 def loadPagesCSV(csvfile):
     c = 0
     f = csv.reader(open(csvfile, 'r'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    l = []
+    d = {}
     for row in f:
         if c == 0:
             c += 1
             continue
 
-        d = {
+        d[int(row[0])] = {
             'page_id': int(row[0]), 
             'page_namespace': int(row[1]), 
             'page_title': row[2], 
             'page_creation_date': row[3], 
             'page_creator': row[4], 
-            'page_is_redirect': row[5]=='True' and True or False, 
+            'page_is_redirect': row[5] == 'True' and True or False, 
         }
-        l.append(d)
         c += 1
     
-    return l
+    return d
 
 def main():
     if len(sys.argv) == 3:
@@ -94,41 +94,85 @@ def main():
     #currentevents csv
     csvfiles = glob.glob("currentevents-%s-%s.csv.*" % (dumpwiki, dumpdate))
     csvfiles.sort()
-    currentevents = []
+    currentevents = {}
     for csvfile in csvfiles:
         print('Loading',csvfile)
-        currentevents += loadCurrentEventsCSV(csvfile)
-    print('Loaded',len(currentevents),'current events')
+        d = loadCurrentEventsCSV(csvfile)
+        for k, v in d.items():
+            currentevents[k] = v
+    print('Loaded',len(currentevents.items()),'current events')
     
     #pages csv
-    csvfiles = glob.glob("newpages-%s-%s.csv.*" % (dumpwiki, dumpdate))
+    csvfiles = glob.glob("pages-%s-%s.csv.*" % (dumpwiki, dumpdate))
     csvfiles.sort()
-    pages = []
+    pages = {}
     for csvfile in csvfiles:
         print('Loading',csvfile)
-        pages += loadPagesCSV(csvfile)
-    print('Loaded',len(pages),'pages')
+        d = loadPagesCSV(csvfile)
+        for k, v in d.items():
+            pages[k] = v
+    print('Loaded',len(pages.items()),'pages')
     
     num2namespace = {
         'eswiki': {0:'Principal', 104:'Anexo'}, 
     }
-    namespaces = list(set([currentevent['page_namespace'] for currentevent in currentevents]))
+    namespaces = list(set([v['page_namespace'] for k, v in currentevents.items()]))
     namespaces.sort()
     d = {
         'dumpdate': dumpdate, 
         'namespaces': ', '.join(['%d (%s)' % (nm, num2namespace[dumpwiki][nm]) for nm in namespaces]), 
-        'totalcurrentevents': len(currentevents), 
-        'totalcurrenteventspages': len(set([currentevent['page_id'] for currentevent in currentevents])), 
+        'newestcurrenteventtitle': '', 
+        'newestcurrenteventdate': '2000-01-01T00:00:00Z', 
+        'newestcurrenteventuser': '', 
+        'newestpagetitle': '', 
+        'newestpagecreationdate': '2000-01-01T00:00:00Z', 
+        'newestpagecreator': '', 
+        'oldestcurrenteventtitle': '', 
+        'oldestcurrenteventdate': '2099-01-01T00:00:00Z', 
+        'oldestcurrenteventuser': '', 
+        'oldestpagetitle': '', 
+        'oldestpagecreationdate': '2099-01-01T00:00:00Z', 
+        'oldestpagecreator': '', 
+        'totalcurrentevents': len(currentevents.keys()), 
+        'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
         'totalnamespaces': len(namespaces), 
-        'totalusefulpages': sum([not page['page_is_redirect'] for page in pages]), 
+        'totalusefulpages': sum([not v['page_is_redirect'] for k, v in pages.items()]), 
         'totalpages': len(pages), 
-        'totalredirects': sum([page['page_is_redirect'] for page in pages]), 
+        'totalredirects': sum([v['page_is_redirect'] for k, v in pages.items()]), 
         'wiki': dumpwiki, 
         'wikilang': dumpwiki.split('wiki')[0], 
     }
     #extra calculations
     d['redirectspercent'] = round(d['totalredirects']/(d['totalpages']/100), 1)
     d['usefulpagespercent'] = round(d['totalusefulpages']/(d['totalpages']/100), 1)
+    
+    #oldest & newest current events
+    for k, v in currentevents.items():
+        if v['it_rev_timestamp'] < d['oldestcurrenteventdate']:
+            d['oldestcurrenteventtitle'] = v['page_title']
+            d['oldestcurrenteventdate'] = v['it_rev_timestamp']
+            d['oldestcurrenteventrevid'] = v['it_rev_id']
+            d['oldestcurrenteventuser'] = v['it_rev_username']
+
+    for k, v in currentevents.items():
+        if v['it_rev_timestamp'] > d['newestcurrenteventdate']:
+            d['newestcurrenteventtitle'] = v['page_title']
+            d['newestcurrenteventdate'] = v['it_rev_timestamp']
+            d['newestcurrenteventrevid'] = v['it_rev_id']
+            d['newestcurrenteventuser'] = v['it_rev_username']
+
+    #oldest & newest pages
+    for k, v in pages.items():
+        if v['page_creation_date'] < d['oldestpagecreationdate']:
+            d['oldestpagetitle'] = v['page_title']
+            d['oldestpagecreationdate'] = v['page_creation_date']
+            d['oldestpagecreator'] = v['page_creator']
+
+    for k, v in pages.items():
+        if v['page_creation_date'] > d['newestpagecreationdate']:
+            d['newestpagetitle'] = v['page_title']
+            d['newestpagecreationdate'] = v['page_creation_date']
+            d['newestpagecreator'] = v['page_creator']
 
     html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
@@ -139,7 +183,9 @@ def main():
 <body>
     <h1>Current events ($wiki, $dumpdate)</h1>
     
-    <p>Este análisis corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>. 
+    <p>Este análisis corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>.
+    
+    <p>Se ha generado en X horas.</p>
     
     <p>Resumen general:</p>
     <ul>
@@ -147,13 +193,27 @@ def main():
         <li>Se han encontrado <b>$totalusefulpages</b> páginas de contenido y <b>$totalredirects</b> redirecciones. En total <b>$totalpages</b> páginas.</li>
         <ul>
             <li>El <b>$usefulpagespercent%</b> son páginas de contenido y el <b>$redirectspercent%</b> son redirecciones.</li>
+            <li>La página más antigua es <a href="https://$wikilang.wikipedia.org/wiki/$oldestpagetitle">$oldestpagetitle</a>, creada por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestpagecreator">$oldestpagecreator</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestpagecreator">contrib.</a>) el $oldestpagecreationdate.</li> <- Añadir Special:Diff/XXXX/prev cuando se genere el page_creation_rev_id
+            <li>La página más reciente es <a href="https://$wikilang.wikipedia.org/wiki/$newestpagetitle">$newestpagetitle</a>, creada por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestpagecreator">$newestpagecreator</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestpagecreator">contrib.</a>) el $newestpagecreationdate.</li>
         </ul>
         <li>Se han encontrado <b>$totalcurrentevents</b> eventos de actualidad repartidos en <b>$totalcurrenteventspages</b> páginas.</li>
+        <ul>
+            <li>El evento de actualidad más antiguo sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$oldestcurrenteventtitle">$oldestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestcurrenteventuser">$oldestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$oldestcurrenteventrevid/prev">$oldestcurrenteventdate</a>.</li>
+            <li>El evento de actualidad más reciente sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$newestcurrenteventtitle">$newestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestcurrenteventuser">$newestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$newestcurrenteventrevid/prev">$newestcurrenteventdate</a>.</li>
+        </ul>
     </ul>
+    
+    <!--
+    Current events por años
+    Tipos de eventos más frecuentes
+    Páginas que han recibido más eventos
+    Páginas más editadas o con más editores durante eventos
+    Días con más eventos de actualidad, eventos que se esparcen por varios artículos ({{current related}})
+    -->
+    
 </body>
 </html>
 """)
-    
     html = html.substitute(d)
     
     f = open('index.html', 'w')
