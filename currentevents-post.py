@@ -18,6 +18,7 @@ import csv
 import glob
 import os
 import re
+import statistics
 import string
 import sys
 
@@ -146,28 +147,58 @@ def main():
         'csvlinks': '<li><a href="currentevents-{0}-{1}.csv">currentevents-{0}-{1}.csv</a></li>\n<li><a href="pages-{0}-{1}.csv">pages-{0}-{1}.csv</a></li>\n'.format(dumpwiki, dumpdate), 
         'timereal': round(timereal/60, 2), 
         'dumpdate': dumpdate, 
+        
+        'difflenmean': round(statistics.mean([v['diff_len'] for k, v in currentevents.items()]), 1),
+        'difflenmedian': round(statistics.median([v['diff_len'] for k, v in currentevents.items()]), 1),
+        'difflenmode': round(statistics.mode([v['diff_len'] for k, v in currentevents.items()]), 1),
+        
+        'difflinksmean': round(statistics.mean([v['diff_links'] for k, v in currentevents.items()]), 1),
+        'difflinksmedian': round(statistics.median([v['diff_links'] for k, v in currentevents.items()]), 1),
+        'difflinksmode': round(statistics.mode([v['diff_links'] for k, v in currentevents.items()]), 1),
+        
+        'diffextlinksmean': round(statistics.mean([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+        'diffextlinksmedian': round(statistics.median([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+        'diffextlinksmode': round(statistics.mode([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+        
+        'diffrefsmean': round(statistics.mean([v['diff_refs'] for k, v in currentevents.items()]), 1),
+        'diffrefsmedian': round(statistics.median([v['diff_refs'] for k, v in currentevents.items()]), 1),
+        'diffrefsmode': round(statistics.mode([v['diff_refs'] for k, v in currentevents.items()]), 1),
+        
+        'difftemplatesmean': round(statistics.mean([v['diff_templates'] for k, v in currentevents.items()]), 1),
+        'difftemplatesmedian': round(statistics.median([v['diff_templates'] for k, v in currentevents.items()]), 1),
+        'difftemplatesmode': round(statistics.mode([v['diff_templates'] for k, v in currentevents.items()]), 1),
+        
+        'diffimagesmean': round(statistics.mean([v['diff_images'] for k, v in currentevents.items()]), 1),
+        'diffimagesmedian': round(statistics.median([v['diff_images'] for k, v in currentevents.items()]), 1),
+        'diffimagesmode': round(statistics.mode([v['diff_images'] for k, v in currentevents.items()]), 1),
+        
         'namespaces': ', '.join(['%d (%s)' % (nm, num2namespace[dumpwiki][nm]) for nm in namespaces]), 
+        
         'newestcurrenteventtitle': '', 
         'newestcurrenteventdate': '2000-01-01T00:00:00Z', 
         'newestcurrenteventuser': '', 
         'newestpagetitle': '', 
         'newestpagecreationdate': '2000-01-01T00:00:00Z', 
         'newestpagecreator': '', 
+        
         'oldestcurrenteventtitle': '', 
         'oldestcurrenteventdate': '2099-01-01T00:00:00Z', 
         'oldestcurrenteventuser': '', 
         'oldestpagetitle': '', 
         'oldestpagecreationdate': '2099-01-01T00:00:00Z', 
         'oldestpagecreator': '', 
+        
         'tagtypetemplate': sum([v['tag_type'] == 'template' for k, v in currentevents.items()]),
         'tagtypecategory': sum([v['tag_type'] == 'category' for k, v in currentevents.items()]),
         'tagtypeboth': sum([v['tag_type'] == 'both' for k, v in currentevents.items()]),
+        
         'totalcurrentevents': len(currentevents.keys()), 
         'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
         'totalnamespaces': len(namespaces), 
         'totalusefulpages': sum([not v['page_is_redirect'] for k, v in pages.items()]), 
         'totalpages': len(pages), 
         'totalredirects': sum([v['page_is_redirect'] for k, v in pages.items()]), 
+        
         'wiki': dumpwiki, 
         'wikilang': dumpwiki.split('wiki')[0], 
     }
@@ -299,6 +330,16 @@ def main():
             <li>Para marcarlo como evento de actualidad, <b>$tagtypetemplate</b> usaron plantilla, <b>$tagtypecategory</b> usaron categoría y <b>$tagtypeboth</b> usaron ambos métodos.</li>
             <li>El evento de actualidad más antiguo sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$oldestcurrenteventtitle">$oldestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestcurrenteventuser">$oldestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$oldestcurrenteventrevid/prev">$oldestcurrenteventdate</a>.</li>
             <li>El evento de actualidad más reciente sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$newestcurrenteventtitle">$newestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestcurrenteventuser">$newestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$newestcurrenteventrevid/prev">$newestcurrenteventdate</a>.</li>
+        </ul>
+        
+        <li>En cuanto a los cambios que se producen en los artículos, hay un incremento en:</li>
+        <ul>
+            <li>Tamaño en bytes: <b>$difflenmean</b> (media), <b>$difflenmedian</b> (mediana), <b>$difflenmode</b> (moda)
+            <li>Número de enlaces: <b>$difflinksmean</b> (media), <b>$difflinksmedian</b> (mediana), <b>$difflinksmode</b> (moda)
+            <li>Número de enlaces externos: <b>$diffextlinksmean</b> (media), <b>$diffextlinksmedian</b> (mediana), <b>$diffextlinksmode</b> (moda)
+            <li>Número de referencias: <b>$diffrefsmean</b> (media), <b>$diffrefsmedian</b> (mediana), <b>$diffrefsmode</b> (moda)
+            <li>Número de plantillas: <b>$difftemplatesmean</b> (media), <b>$difftemplatesmedian</b> (mediana), <b>$difftemplatesmode</b> (moda)
+            <li>Número de imágenes: <b>$diffimagesmean</b> (media), <b>$diffimagesmedian</b> (mediana), <b>$diffimagesmode</b> (moda)
         </ul>
     </ul>
     
