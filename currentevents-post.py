@@ -21,6 +21,14 @@ import re
 import string
 import sys
 
+def mergefiles(csvfiles):
+    csvfiles.sort()
+    if csvfiles:
+        prefixfile = csvfiles[0].split('.1')[0]
+        os.system('cp {0}.1 {0}'.format(prefixfile))
+        for csvfile in csvfiles[1:]:
+            os.system('tail -q -n +2 {0} >> {1}'.format(csvfile, prefixfile))
+
 def loadCurrentEventsCSV(csvfile):
     c = 0
     f = csv.reader(open(csvfile, 'r'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -91,6 +99,19 @@ def main():
         print('Missing wiki and date: python script.py eswiki 20140509')
         sys.exit()
     
+    #error logs
+    errorlogs = glob.glob("%s*.err" % (dumpwiki))
+    errorlogs.sort()
+    timereal = 0
+    for errorlog in errorlogs:
+        f = open(errorlog, 'r')
+        raw = f.read()
+        f.close()
+        m = re.findall(r'(?im)real\s*(\d+)m', raw) #real    570m46.569s
+        if m:
+            if int(m[0]) > timereal:
+                timereal = int(m[0])
+    
     #currentevents csv
     csvfiles = glob.glob("currentevents-%s-%s.csv.*" % (dumpwiki, dumpdate))
     csvfiles.sort()
@@ -101,6 +122,7 @@ def main():
         for k, v in d.items():
             currentevents[k] = v
     print('Loaded',len(currentevents.items()),'current events')
+    mergefiles(csvfiles)
     
     #pages csv
     csvfiles = glob.glob("pages-%s-%s.csv.*" % (dumpwiki, dumpdate))
@@ -112,6 +134,7 @@ def main():
         for k, v in d.items():
             pages[k] = v
     print('Loaded',len(pages.items()),'pages')
+    mergefiles(csvfiles)
     
     #dict for stats
     num2namespace = {
@@ -120,6 +143,8 @@ def main():
     namespaces = list(set([v['page_namespace'] for k, v in currentevents.items()]))
     namespaces.sort()
     d = {
+        'csvlinks': '<li><a href="currentevents-{0}-{1}.csv">currentevents-{0}-{1}.csv</a></li>\n<li><a href="pages-{0}-{1}.csv">pages-{0}-{1}.csv</a></li>\n'.format(dumpwiki, dumpdate), 
+        'timereal': round(timereal/60, 2), 
         'dumpdate': dumpdate, 
         'namespaces': ', '.join(['%d (%s)' % (nm, num2namespace[dumpwiki][nm]) for nm in namespaces]), 
         'newestcurrenteventtitle': '', 
@@ -134,6 +159,9 @@ def main():
         'oldestpagetitle': '', 
         'oldestpagecreationdate': '2099-01-01T00:00:00Z', 
         'oldestpagecreator': '', 
+        'tagtypetemplate': sum([v['tag_type'] == 'template' for k, v in currentevents.items()]),
+        'tagtypecategory': sum([v['tag_type'] == 'category' for k, v in currentevents.items()]),
+        'tagtypeboth': sum([v['tag_type'] == 'both' for k, v in currentevents.items()]),
         'totalcurrentevents': len(currentevents.keys()), 
         'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
         'totalnamespaces': len(namespaces), 
@@ -146,9 +174,6 @@ def main():
     #extra calculations
     d['redirectspercent'] = round(d['totalredirects']/(d['totalpages']/100), 1)
     d['usefulpagespercent'] = round(d['totalusefulpages']/(d['totalpages']/100), 1)
-    
-    #csvlinks
-    d['csvlinks'] = ''
     
     #oldest & newest current events
     for k, v in currentevents.items():
@@ -208,12 +233,38 @@ def main():
     for k, v in currentevents.items():
         if v['page_id'] in stats_by_page:
             stats_by_page[v['page_id']]['currentevents'].append(k)
+            stats_by_page[v['page_id']]['dates'].append('<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0]))
         else:
-            stats_by_page[v['page_id']] = {'currentevents': [k]}
-    most_freq_pages = [[len(v['currentevents']), k] for k, v in stats_by_page.items()]
+            stats_by_page[v['page_id']] = {
+                'currentevents': [k], 
+                'dates': ['<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0])]
+            }
+    most_freq_pages = [[len(v['currentevents']), k, v['dates']] for k, v in stats_by_page.items()]
     most_freq_pages.sort(reverse=True)
-    stats_by_page = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td></tr>'.format(d['wikilang'], pages[k]['page_title'], v) for v, k in most_freq_pages[:100]])
-    d['stats_by_page'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th>\n{0}\n</table>".format(stats_by_page)
+    stats_by_page = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td><td>{3}</td></tr>'.format(d['wikilang'], pages[rev_id]['page_title'], c, ', '.join(dates)) for c, rev_id, dates in most_freq_pages[:100]])
+    d['stats_by_page'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page)
+    
+    #stats by event
+    stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
+    for k, v in currentevents.items():
+        if re.search(r'(fallecimiento|muerte|dead)', v['tag_string']):
+            stats_by_event['dead'] += 1
+        elif re.search(r'(conflicto|guerra|conflict|war)', v['tag_string']):
+            stats_by_event['conflict'] += 1
+        elif re.search(r'(deporte|sport)', v['tag_string']):
+            stats_by_event['sports'] += 1
+        elif re.search(r'(desastre|disaster)', v['tag_string']):
+            stats_by_event['disaster'] += 1
+        elif re.search(r'(elecciones|election)', v['tag_string']):
+            stats_by_event['election'] += 1
+        elif re.search(r'(sencillo|single)', v['tag_string']):
+            stats_by_event['music'] += 1
+        else:
+            stats_by_event['other'] += 1
+    stats_by_event = [[v, k] for k, v in stats_by_event.items()]
+    stats_by_event.sort(reverse=True)
+    stats_by_event = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
+    d['stats_by_event'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event)
     
     html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
@@ -224,35 +275,46 @@ def main():
 <body>
     <h1>Current events ($wiki, $dumpdate)</h1>
     
-    <p>Este análisis corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>.
+    <p>Este análisis de <b>eventos de actualidad</b> corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>.
     
-    <p>Se ha generado en X horas.</p>
+    <p>Se ha generado en <b>$timereal</b> horas. Estos son los datos en bruto:</p>
     <ul>
         $csvlinks
     </ul>
     
-    <p>Resumen general:</p>
+    <h2>Resumen general</h2>
+    
+    <p>A continuación se ofrece un <b>resumen general</b>:</p>
     <ul>
-        <li>Se han analizado <b>$totalnamespaces</b> espacios de nombres: $namespaces.</li>
+        <li>Se han analizado páginas de <b>$totalnamespaces</b> espacios de nombres: $namespaces.</li>
         <li>Se han encontrado <b>$totalusefulpages</b> páginas de contenido y <b>$totalredirects</b> redirecciones. En total <b>$totalpages</b> páginas.</li>
         <ul>
             <li>El <b>$usefulpagespercent%</b> son páginas de contenido y el <b>$redirectspercent%</b> son redirecciones.</li>
             <li>La página más antigua es <a href="https://$wikilang.wikipedia.org/wiki/$oldestpagetitle">$oldestpagetitle</a>, creada por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestpagecreator">$oldestpagecreator</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestpagecreator">contrib.</a>) el $oldestpagecreationdate.</li> <- Añadir Special:Diff/XXXX/prev cuando se genere el page_creation_rev_id
             <li>La página más reciente es <a href="https://$wikilang.wikipedia.org/wiki/$newestpagetitle">$newestpagetitle</a>, creada por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestpagecreator">$newestpagecreator</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestpagecreator">contrib.</a>) el $newestpagecreationdate.</li>
         </ul>
+        
         <li>Se han encontrado <b>$totalcurrentevents</b> eventos de actualidad repartidos en <b>$totalcurrenteventspages</b> páginas.</li>
         <ul>
+            <li>Para marcarlo como evento de actualidad, <b>$tagtypetemplate</b> usaron plantilla, <b>$tagtypecategory</b> usaron categoría y <b>$tagtypeboth</b> usaron ambos métodos.</li>
             <li>El evento de actualidad más antiguo sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$oldestcurrenteventtitle">$oldestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestcurrenteventuser">$oldestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$oldestcurrenteventrevid/prev">$oldestcurrenteventdate</a>.</li>
             <li>El evento de actualidad más reciente sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$newestcurrenteventtitle">$newestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestcurrenteventuser">$newestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$newestcurrenteventrevid/prev">$newestcurrenteventdate</a>.</li>
         </ul>
     </ul>
     
+    <h2>Por años</h2>
+    
     $stats_by_year
+    
+    <h2>Por páginas</h2>
     
     $stats_by_page
     
+    <h2>Por eventos</h2>
+    
+    $stats_by_event
+    
     <!--
-    Tipos de eventos más frecuentes
     Páginas más editadas o con más editores durante eventos
     Días con más eventos de actualidad, eventos que se esparcen por varios artículos ({{current related}})
     -->
