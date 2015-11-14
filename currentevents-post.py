@@ -47,8 +47,8 @@ def loadCurrentEventsCSV(csvfile):
             'rt_rev_comment': row[13],
             'tag_type': row[14],
             'tag_string': row[15],
-            'tag_time_since_creation': row[16],
-            'tag_duration': row[17],
+            'tag_time_since_creation': float(row[16]),
+            'tag_duration': float(row[17]),
             'tag_edits': int(row[18]),
             'tag_distinct_editors': int(row[19]),
             'diff_len': int(row[20]),
@@ -179,18 +179,41 @@ def main():
             d['newestpagecreator'] = v['page_creator']
     
     #stats by year
+    max_tag_time_since_creation = 24 # max hours
     stats_by_year = {}
     for k, v in currentevents.items():
         year = int(v['it_rev_timestamp'].split('-')[0])
         if year in stats_by_year:
             stats_by_year[year]['currentevents'] += 1
-            stats_by_year[year]['articles'].add(v['page_id'])
+            stats_by_year[year]['currenteventpages'].add(v['page_id'])
+            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
+                stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
         else:
-            stats_by_year[year] = {'currentevents': 1, 'articles': set([v['page_id']])}
+            stats_by_year[year] = {'currentevents': 1, 'currenteventpages': set([v['page_id']]), 'currenteventpagescreated': set([]), 'totalpagescreated': set([])}
+            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
+                stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
+    for k, v in pages.items():
+        if v['page_is_redirect']:
+            continue
+        year = int(v['page_creation_date'].split('-')[0])
+        if year in stats_by_year:
+            stats_by_year[year]['totalpagescreated'].add(k)
     stats_by_year = [[k, v] for k, v in stats_by_year.items()]
     stats_by_year.sort()
-    stats_by_year = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>".format(k, v['currentevents'], len(v['articles'])) for k, v in stats_by_year])
-    d['stats_by_year'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos</th><th>Artículos</th>\n{0}\n</table>".format(stats_by_year)
+    stats_by_year = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), len(v['totalpagescreated'])) for k, v in stats_by_year])
+    d['stats_by_year'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year)
+    
+    #stats by page
+    stats_by_page = {}
+    for k, v in currentevents.items():
+        if v['page_id'] in stats_by_page:
+            stats_by_page[v['page_id']]['currentevents'].append(k)
+        else:
+            stats_by_page[v['page_id']] = {'currentevents': [k]}
+    most_freq_pages = [[len(v['currentevents']), k] for k, v in stats_by_page.items()]
+    most_freq_pages.sort(reverse=True)
+    stats_by_page = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td></tr>'.format(d['wikilang'], pages[k]['page_title'], v) for v, k in most_freq_pages[:100]])
+    d['stats_by_page'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th>\n{0}\n</table>".format(stats_by_page)
     
     html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
@@ -226,10 +249,10 @@ def main():
     
     $stats_by_year
     
+    $stats_by_page
     
     <!--
     Tipos de eventos más frecuentes
-    Páginas que han recibido más eventos
     Páginas más editadas o con más editores durante eventos
     Días con más eventos de actualidad, eventos que se esparcen por varios artículos ({{current related}})
     -->
