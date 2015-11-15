@@ -30,6 +30,11 @@ from mw.xml_dump import Iterator
 
 #calcular la duracion media de la plantilla, en total y por tema
 
+def pagemoved(revtext, prevrevtext):
+    if revtext != '' and revtext == prevrevtext:
+        return True
+    return False
+
 def timediff(start, end):
     t = datetime.datetime.strptime(end, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
     return t
@@ -91,6 +96,7 @@ def main():
         'diff_refs', 
         'diff_templates', 
         'diff_images', 
+        'page_moves', 
         #ideas: diff_sections
         ]
     #maintenance templates
@@ -162,6 +168,7 @@ def main():
         pagecreationdate = ''
         page_is_redirect = page.redirect and 'True' or 'False'
         temp = {} # to detect wrongly removed templates
+        prevrevtext = ''
         for rev in page:
             if revcount == 0:
                 if rev.contributor:
@@ -186,6 +193,9 @@ def main():
                     #still is current event
                     currentevents[-1]['tag_edits'] += 1
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
+                    #check page moves
+                    if pagemoved(revtext, prevrevtext):
+                        currentevents[-1]['page_moves'] += 1
                 else:
                     #tagged as current event just now
                     if temp:
@@ -242,12 +252,14 @@ def main():
                         'tag_duration_(hours)': "", 
                         'tag_edits': 1, #counter to increment
                         'tag_distinct_editors': set([rev_user_text]), #set of unique editors
-                        'diff_len': len(revtext), 
-                        'diff_links': len(re.findall(links_r, revtext)), 
-                        'diff_extlinks': len(re.findall(extlinks_r, revtext)), 
-                        'diff_refs': len(re.findall(refs_r, revtext)), 
-                        'diff_templates': len(re.findall(templates_r, revtext)), 
-                        'diff_images': len(re.findall(images_r, revtext)), 
+                        #prevrevtext to catch any change right when is marked as current event
+                        'diff_len': len(prevrevtext), 
+                        'diff_links': len(re.findall(links_r, prevrevtext)), 
+                        'diff_extlinks': len(re.findall(extlinks_r, prevrevtext)), 
+                        'diff_refs': len(re.findall(refs_r, prevrevtext)), 
+                        'diff_templates': len(re.findall(templates_r, prevrevtext)), 
+                        'diff_images': len(re.findall(images_r, prevrevtext)), 
+                        'page_moves': 0, 
                     }
                     currentevents.append(currentevent)
             else:
@@ -268,18 +280,25 @@ def main():
                     currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
                     currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
                     currentevents[-1]['diff_len'] = len(revtext) - currentevents[-1]['diff_len']
+                    #revtext because it was current event until this very edit
                     currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
                     currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
                     currentevents[-1]['diff_refs'] = len(re.findall(refs_r, revtext)) - currentevents[-1]['diff_refs']
                     currentevents[-1]['diff_templates'] = len(re.findall(templates_r, revtext)) - currentevents[-1]['diff_templates']
                     currentevents[-1]['diff_images'] = len(re.findall(images_r, revtext)) - currentevents[-1]['diff_images']
+                    currentevents[-1]['page_moves'] += 1
                     tagged = False
                 else:
                     if temp:
                         #keep temp updated
                         temp['tag_edits'] += 1
-                        temp['tag_distinct_editors'].add(rev_user_text) 
-
+                        temp['tag_distinct_editors'].add(rev_user_text)
+                        #check page moves
+                        if pagemoved(revtext, prevrevtext):
+                            temp['page_moves'] += 1
+            
+            prevrevtext = revtext #needed for diff stats
+        
         if tagged:
             #tagged still as of dumpdate
             currentevents[-1]['page_creation_date'] = currentevents[-1]['page_creation_date'].long_format()
@@ -288,6 +307,7 @@ def main():
             currentevents[-1]['tag_edits'] += 1
             currentevents[-1]['tag_distinct_editors'].add(rev_user_text)
             currentevents[-1]['tag_distinct_editors'] = len(currentevents[-1]['tag_distinct_editors'])
+            #use revtext and not prevrevtext because it is still current event
             currentevents[-1]['diff_len'] = len(revtext) - currentevents[-1]['diff_len']
             currentevents[-1]['diff_links'] = len(re.findall(links_r, revtext)) - currentevents[-1]['diff_links']
             currentevents[-1]['diff_extlinks'] = len(re.findall(extlinks_r, revtext)) - currentevents[-1]['diff_extlinks']
