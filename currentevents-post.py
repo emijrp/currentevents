@@ -240,32 +240,29 @@ def main():
     for k, v in currentevents.items():
         year = int(v['it_rev_timestamp'].split('-')[0])
         if not year in stats_by_year:
-            stats_by_year[year] = {'currentevents': 0, 'currenteventpages': set([]), 'currenteventpagescreated': set([]), 'currenteventpagesedited': set([]), 'totalpagescreated': set([])}
+            stats_by_year[year] = {'currentevents': 0, 'currenteventpages': set([]), 'currenteventpagescreated': set([]), 'totalpagescreated': 0}
         
         stats_by_year[year]['currentevents'] += 1
         stats_by_year[year]['currenteventpages'].add(v['page_id'])
         if v['tag_time_since_creation'] <= max_tag_time_since_creation:
             stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
-        else:
-            #if v['page_id'] not in stats_by_year[year]['currenteventpagescreated']:
-            stats_by_year[year]['currenteventpagesedited'].add(v['page_id'])
         
     for k, v in pages.items():
         if v['page_is_redirect']:
             continue
         year = int(v['page_creation_date'].split('-')[0])
         if year in stats_by_year:
-            stats_by_year[year]['totalpagescreated'].add(k)
+            stats_by_year[year]['totalpagescreated'] += 1
+    
     stats_by_year = [[k, v] for k, v in stats_by_year.items()]
     stats_by_year.sort()
-    stats_by_year_table = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), len(v['currenteventpagesedited']), len(v['totalpagescreated'])) for k, v in stats_by_year])
+    stats_by_year_table = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), v['totalpagescreated']) for k, v in stats_by_year])
     stats_by_year_table += "<tr><td><b>Total</b></td>"
     stats_by_year_table += "<td><b>{0}</b></td>".format(sum([v['currentevents'] for k, v in stats_by_year]))
     stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpages']) for k, v in stats_by_year]))
     stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagescreated']) for k, v in stats_by_year]))
-    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagesedited']) for k, v in stats_by_year]))
-    stats_by_year_table += "<td><b>{0}</b></td></tr>".format(sum([len(v['totalpagescreated']) for k, v in stats_by_year]))
-    d['stats_by_year_table'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas editadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year_table)
+    stats_by_year_table += "<td><b>{0}</b></td></tr>".format(sum([v['totalpagescreated'] for k, v in stats_by_year]))
+    d['stats_by_year_table'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year_table)
     
     #stats by page
     stats_by_page = {}
@@ -333,7 +330,7 @@ def main():
             <li>La página más reciente es <a href="https://$wikilang.wikipedia.org/wiki/$newestpagetitle">$newestpagetitle</a>, creada por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestpagecreator">$newestpagecreator</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestpagecreator">contrib.</a>) el $newestpagecreationdate.</li>
         </ul>
         
-        <li>Se han encontrado <b>$totalcurrentevents</b> eventos de actualidad repartidos en <b>$totalcurrenteventspages</b> páginas.</li>
+        <li>Se han encontrado <b>$totalcurrentevents</b> eventos de actualidad repartidos en <b>$totalcurrenteventspages</b> páginas diferentes.</li>
         <ul>
             <li>Para marcarlo como evento de actualidad, <b>$tagtypetemplate</b> usaron plantilla, <b>$tagtypecategory</b> usaron categoría y <b>$tagtypeboth</b> usaron ambos métodos.</li>
             <li>El evento de actualidad más antiguo sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$oldestcurrenteventtitle">$oldestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestcurrenteventuser">$oldestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$oldestcurrenteventrevid/prev">$oldestcurrenteventdate</a>.</li>
