@@ -239,15 +239,17 @@ def main():
     stats_by_year = {}
     for k, v in currentevents.items():
         year = int(v['it_rev_timestamp'].split('-')[0])
-        if year in stats_by_year:
-            stats_by_year[year]['currentevents'] += 1
-            stats_by_year[year]['currenteventpages'].add(v['page_id'])
-            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
-                stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
+        if not year in stats_by_year:
+            stats_by_year[year] = {'currentevents': 0, 'currenteventpages': set([]), 'currenteventpagescreated': set([]), 'currenteventpagesedited': set([]), 'totalpagescreated': set([])}
+        
+        stats_by_year[year]['currentevents'] += 1
+        stats_by_year[year]['currenteventpages'].add(v['page_id'])
+        if v['tag_time_since_creation'] <= max_tag_time_since_creation:
+            stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
         else:
-            stats_by_year[year] = {'currentevents': 1, 'currenteventpages': set([v['page_id']]), 'currenteventpagescreated': set([]), 'totalpagescreated': set([])}
-            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
-                stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
+            #if v['page_id'] not in stats_by_year[year]['currenteventpagescreated']:
+            stats_by_year[year]['currenteventpagesedited'].add(v['page_id'])
+        
     for k, v in pages.items():
         if v['page_is_redirect']:
             continue
@@ -256,8 +258,14 @@ def main():
             stats_by_year[year]['totalpagescreated'].add(k)
     stats_by_year = [[k, v] for k, v in stats_by_year.items()]
     stats_by_year.sort()
-    stats_by_year = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), len(v['totalpagescreated'])) for k, v in stats_by_year])
-    d['stats_by_year'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year)
+    stats_by_year_table = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), len(v['currenteventpagesedited']), len(v['totalpagescreated'])) for k, v in stats_by_year])
+    stats_by_year_table += "<tr><td><b>Total</b></td>"
+    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([v['currentevents'] for k, v in stats_by_year]))
+    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpages']) for k, v in stats_by_year]))
+    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagescreated']) for k, v in stats_by_year]))
+    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagesedited']) for k, v in stats_by_year]))
+    stats_by_year_table += "<td><b>{0}</b></td></tr>".format(sum([len(v['totalpagescreated']) for k, v in stats_by_year]))
+    d['stats_by_year_table'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas editadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year_table)
     
     #stats by page
     stats_by_page = {}
@@ -272,8 +280,8 @@ def main():
             }
     most_freq_pages = [[len(v['currentevents']), k, v['dates']] for k, v in stats_by_page.items()]
     most_freq_pages.sort(reverse=True)
-    stats_by_page = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td><td>{3}</td></tr>'.format(d['wikilang'], pages[rev_id]['page_title'], c, ', '.join(dates)) for c, rev_id, dates in most_freq_pages[:100]])
-    d['stats_by_page'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page)
+    stats_by_page_table = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td><td>{3}</td></tr>'.format(d['wikilang'], pages[rev_id]['page_title'], c, ', '.join(dates)) for c, rev_id, dates in most_freq_pages[:100]])
+    d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
     
     #stats by event
     stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
@@ -294,8 +302,8 @@ def main():
             stats_by_event['other'] += 1
     stats_by_event = [[v, k] for k, v in stats_by_event.items()]
     stats_by_event.sort(reverse=True)
-    stats_by_event = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
-    d['stats_by_event'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event)
+    stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
+    d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event_table)
     
     html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
@@ -345,15 +353,15 @@ def main():
     
     <h2>Por años</h2>
     
-    $stats_by_year
+    $stats_by_year_table
     
     <h2>Por páginas</h2>
     
-    $stats_by_page
+    $stats_by_page_table
     
     <h2>Por eventos</h2>
     
-    $stats_by_event
+    $stats_by_event_table
     
     <!--
     Páginas más editadas o con más editores durante eventos
