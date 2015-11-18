@@ -285,7 +285,7 @@ def main():
         #stats by event
         stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
         for k, v in currentevents.items():
-            if re.search(r'(fallecimiento|muerte|dead)', v['tag_string']):
+            if re.search(r'(mort|fallecimiento|muerte|dead)', v['tag_string']):
                 stats_by_event['dead'] += 1
             elif re.search(r'(conflicto|guerra|conflict|war)', v['tag_string']):
                 stats_by_event['conflict'] += 1
@@ -383,12 +383,13 @@ def main():
         dumpwiki, dumpdate = resultdir.split('/')
         if prevdumpwiki != dumpwiki:
             if prevdumpwiki != '':
-                resultul += '\n</ul>'
-            resultsul += '\n<li><b>%s</b></li>' % (dumpwiki)
-            resultsul += '\n<ul>\n<li><a href="%s/%s/index.html">%s</a></li>' % (dumpwiki, dumpdate, dumpdate)
+                resultsul += '\n    </ul>'
+            resultsul += '\n    <li><b>%s</b></li>' % (dumpwiki)
+            resultsul += '\n    <ul>\n        <li><a href="%s/%s/index.html">%s</a></li>' % (dumpwiki, dumpdate, dumpdate)
         else:
-            resultsul += '\n<li>%s</li>' % (dumpdate)
-    resultsul += '\n</ul>'
+            resultsul += '\n        <li>%s</li>' % (dumpdate)
+        prevdumpwiki = dumpwiki
+    resultsul += '\n    </ul>'
     e = {
         'resultsul': resultsul,
     }
