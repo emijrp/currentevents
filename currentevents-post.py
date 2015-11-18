@@ -138,6 +138,9 @@ def main():
         
         #dict for stats
         num2namespace = {
+            'cawiki': {0:'Principal'}, 
+            'dewiki': {0:'Principal'}, 
+            'enwiki': {0:'Principal'}, 
             'eswiki': {0:'Principal', 104:'Anexo'}, 
         }
         namespaces = list(set([v['page_namespace'] for k, v in currentevents.items()]))
