@@ -45,7 +45,6 @@ def timediffinhours(start, end):
     return t
 
 def main():
-    limitdays = 7 #template must be inserted before X days since page creation
     #current events templates regexp
     currentevent_templates_r = {
         "cawiki": re.compile(r'(?im)(\{\{\s*(?:Actualitat|Fet[ _]actual|Fets[ _]recents)\s*(?:\|[^\{\}\n]*?\s*\}\}|\}\}))'), 
