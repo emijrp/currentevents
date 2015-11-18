@@ -93,223 +93,222 @@ def loadPagesCSV(csvfile):
     return d
 
 def main():
-    if len(sys.argv) == 3:
-        dumpwiki = sys.argv[1]
-        dumpdate = sys.argv[2]
-    else:
-        print('Missing wiki and date: python script.py eswiki 20140509')
-        sys.exit()
-    
-    #error logs
-    errorlogs = glob.glob("%s*.err" % (dumpwiki))
-    errorlogs.sort()
-    timereal = 0
-    for errorlog in errorlogs:
-        f = open(errorlog, 'r')
-        raw = f.read()
-        f.close()
-        m = re.findall(r'(?im)real\s*(\d+)m', raw) #real    570m46.569s
-        if m:
-            if int(m[0]) > timereal:
-                timereal = int(m[0])
-    
-    #currentevents csv
-    csvfiles = glob.glob("currentevents-%s-%s.csv.*" % (dumpwiki, dumpdate))
-    csvfiles.sort()
-    currentevents = {}
-    for csvfile in csvfiles:
-        print('Loading',csvfile)
-        d = loadCurrentEventsCSV(csvfile)
-        for k, v in d.items():
-            currentevents[k] = v
-    print('Loaded',len(currentevents.items()),'current events')
-    mergefiles(csvfiles)
-    
-    #pages csv
-    csvfiles = glob.glob("pages-%s-%s.csv.*" % (dumpwiki, dumpdate))
-    csvfiles.sort()
-    pages = {}
-    for csvfile in csvfiles:
-        print('Loading',csvfile)
-        d = loadPagesCSV(csvfile)
-        for k, v in d.items():
-            pages[k] = v
-    print('Loaded',len(pages.items()),'pages')
-    mergefiles(csvfiles)
-    
-    #dict for stats
-    num2namespace = {
-        'eswiki': {0:'Principal', 104:'Anexo'}, 
-    }
-    namespaces = list(set([v['page_namespace'] for k, v in currentevents.items()]))
-    namespaces.sort()
-    d = {
-        'csvlinks': '<li><a href="currentevents-{0}-{1}.csv">currentevents-{0}-{1}.csv</a></li>\n<li><a href="pages-{0}-{1}.csv">pages-{0}-{1}.csv</a></li>\n'.format(dumpwiki, dumpdate), 
-        'timereal': round(timereal/60, 2), 
-        'dumpdate': dumpdate, 
+    resultdirs = glob.glob("*wiki/20*")
+    resultdirs.sort()
+    for resultdir in resultdirs:
+        dumpwiki, dumpdate = resultdir.split('/')
+        print('Reading CSV from',resultdir)
         
-        'difflenmean': round(statistics.mean([v['diff_len'] for k, v in currentevents.items()]), 1),
-        'difflenmedian': round(statistics.median([v['diff_len'] for k, v in currentevents.items()]), 1),
-        'difflenmode': round(statistics.mode([v['diff_len'] for k, v in currentevents.items()]), 1),
+        #error logs
+        errorlogs = glob.glob("%s/%s*.err" % (resultdir, dumpwiki))
+        errorlogs.sort()
+        timereal = 0
+        for errorlog in errorlogs:
+            f = open(errorlog, 'r')
+            raw = f.read()
+            f.close()
+            m = re.findall(r'(?im)real\s*(\d+)m', raw) #real    570m46.569s
+            if m:
+                if int(m[0]) > timereal:
+                    timereal = int(m[0])
         
-        'difflinksmean': round(statistics.mean([v['diff_links'] for k, v in currentevents.items()]), 1),
-        'difflinksmedian': round(statistics.median([v['diff_links'] for k, v in currentevents.items()]), 1),
-        'difflinksmode': round(statistics.mode([v['diff_links'] for k, v in currentevents.items()]), 1),
+        #currentevents csv
+        csvfiles = glob.glob("%s/currentevents-%s-%s.csv.*" % (resultdir, dumpwiki, dumpdate))
+        csvfiles.sort()
+        currentevents = {}
+        for csvfile in csvfiles:
+            print('Loading',csvfile)
+            d = loadCurrentEventsCSV(csvfile)
+            for k, v in d.items():
+                currentevents[k] = v
+        print('Loaded',len(currentevents.items()),'current events')
+        mergefiles(csvfiles)
         
-        'diffextlinksmean': round(statistics.mean([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
-        'diffextlinksmedian': round(statistics.median([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
-        'diffextlinksmode': round(statistics.mode([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+        #pages csv
+        csvfiles = glob.glob("%s/pages-%s-%s.csv.*" % (resultdir, dumpwiki, dumpdate))
+        csvfiles.sort()
+        pages = {}
+        for csvfile in csvfiles:
+            print('Loading',csvfile)
+            d = loadPagesCSV(csvfile)
+            for k, v in d.items():
+                pages[k] = v
+        print('Loaded',len(pages.items()),'pages')
+        mergefiles(csvfiles)
         
-        'diffrefsmean': round(statistics.mean([v['diff_refs'] for k, v in currentevents.items()]), 1),
-        'diffrefsmedian': round(statistics.median([v['diff_refs'] for k, v in currentevents.items()]), 1),
-        'diffrefsmode': round(statistics.mode([v['diff_refs'] for k, v in currentevents.items()]), 1),
+        #dict for stats
+        num2namespace = {
+            'eswiki': {0:'Principal', 104:'Anexo'}, 
+        }
+        namespaces = list(set([v['page_namespace'] for k, v in currentevents.items()]))
+        namespaces.sort()
+        d = {
+            'csvlinks': '<li><a href="currentevents-{0}-{1}.csv">currentevents-{0}-{1}.csv</a></li>\n<li><a href="pages-{0}-{1}.csv">pages-{0}-{1}.csv</a></li>\n'.format(dumpwiki, dumpdate), 
+            'timereal': round(timereal/60, 2), 
+            'dumpdate': dumpdate, 
+            
+            'difflenmean': round(statistics.mean([v['diff_len'] for k, v in currentevents.items()]), 1),
+            'difflenmedian': round(statistics.median([v['diff_len'] for k, v in currentevents.items()]), 1),
+            'difflenmode': round(statistics.mode([v['diff_len'] for k, v in currentevents.items()]), 1),
+            
+            'difflinksmean': round(statistics.mean([v['diff_links'] for k, v in currentevents.items()]), 1),
+            'difflinksmedian': round(statistics.median([v['diff_links'] for k, v in currentevents.items()]), 1),
+            'difflinksmode': round(statistics.mode([v['diff_links'] for k, v in currentevents.items()]), 1),
+            
+            'diffextlinksmean': round(statistics.mean([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+            'diffextlinksmedian': round(statistics.median([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+            'diffextlinksmode': round(statistics.mode([v['diff_extlinks'] for k, v in currentevents.items()]), 1),
+            
+            'diffrefsmean': round(statistics.mean([v['diff_refs'] for k, v in currentevents.items()]), 1),
+            'diffrefsmedian': round(statistics.median([v['diff_refs'] for k, v in currentevents.items()]), 1),
+            'diffrefsmode': round(statistics.mode([v['diff_refs'] for k, v in currentevents.items()]), 1),
+            
+            'difftemplatesmean': round(statistics.mean([v['diff_templates'] for k, v in currentevents.items()]), 1),
+            'difftemplatesmedian': round(statistics.median([v['diff_templates'] for k, v in currentevents.items()]), 1),
+            'difftemplatesmode': round(statistics.mode([v['diff_templates'] for k, v in currentevents.items()]), 1),
+            
+            'diffimagesmean': round(statistics.mean([v['diff_images'] for k, v in currentevents.items()]), 1),
+            'diffimagesmedian': round(statistics.median([v['diff_images'] for k, v in currentevents.items()]), 1),
+            'diffimagesmode': round(statistics.mode([v['diff_images'] for k, v in currentevents.items()]), 1),
+            
+            'namespaces': ', '.join(['%d (%s)' % (nm, num2namespace[dumpwiki][nm]) for nm in namespaces]), 
+            
+            'newestcurrenteventtitle': '', 
+            'newestcurrenteventdate': '2000-01-01T00:00:00Z', 
+            'newestcurrenteventuser': '', 
+            'newestpagetitle': '', 
+            'newestpagecreationdate': '2000-01-01T00:00:00Z', 
+            'newestpagecreator': '', 
+            
+            'oldestcurrenteventtitle': '', 
+            'oldestcurrenteventdate': '2099-01-01T00:00:00Z', 
+            'oldestcurrenteventuser': '', 
+            'oldestpagetitle': '', 
+            'oldestpagecreationdate': '2099-01-01T00:00:00Z', 
+            'oldestpagecreator': '', 
+            
+            'tagtypetemplate': sum([v['tag_type'] == 'template' for k, v in currentevents.items()]),
+            'tagtypecategory': sum([v['tag_type'] == 'category' for k, v in currentevents.items()]),
+            'tagtypeboth': sum([v['tag_type'] == 'both' for k, v in currentevents.items()]),
+            
+            'totalcurrentevents': len(currentevents.keys()), 
+            'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
+            'totalnamespaces': len(namespaces), 
+            'totalusefulpages': sum([not v['page_is_redirect'] for k, v in pages.items()]), 
+            'totalpages': len(pages), 
+            'totalredirects': sum([v['page_is_redirect'] for k, v in pages.items()]), 
+            
+            'wiki': dumpwiki, 
+            'wikilang': dumpwiki.split('wiki')[0], 
+        }
+        #extra calculations
+        d['redirectspercent'] = round(d['totalredirects']/(d['totalpages']/100), 1)
+        d['usefulpagespercent'] = round(d['totalusefulpages']/(d['totalpages']/100), 1)
         
-        'difftemplatesmean': round(statistics.mean([v['diff_templates'] for k, v in currentevents.items()]), 1),
-        'difftemplatesmedian': round(statistics.median([v['diff_templates'] for k, v in currentevents.items()]), 1),
-        'difftemplatesmode': round(statistics.mode([v['diff_templates'] for k, v in currentevents.items()]), 1),
-        
-        'diffimagesmean': round(statistics.mean([v['diff_images'] for k, v in currentevents.items()]), 1),
-        'diffimagesmedian': round(statistics.median([v['diff_images'] for k, v in currentevents.items()]), 1),
-        'diffimagesmode': round(statistics.mode([v['diff_images'] for k, v in currentevents.items()]), 1),
-        
-        'namespaces': ', '.join(['%d (%s)' % (nm, num2namespace[dumpwiki][nm]) for nm in namespaces]), 
-        
-        'newestcurrenteventtitle': '', 
-        'newestcurrenteventdate': '2000-01-01T00:00:00Z', 
-        'newestcurrenteventuser': '', 
-        'newestpagetitle': '', 
-        'newestpagecreationdate': '2000-01-01T00:00:00Z', 
-        'newestpagecreator': '', 
-        
-        'oldestcurrenteventtitle': '', 
-        'oldestcurrenteventdate': '2099-01-01T00:00:00Z', 
-        'oldestcurrenteventuser': '', 
-        'oldestpagetitle': '', 
-        'oldestpagecreationdate': '2099-01-01T00:00:00Z', 
-        'oldestpagecreator': '', 
-        
-        'tagtypetemplate': sum([v['tag_type'] == 'template' for k, v in currentevents.items()]),
-        'tagtypecategory': sum([v['tag_type'] == 'category' for k, v in currentevents.items()]),
-        'tagtypeboth': sum([v['tag_type'] == 'both' for k, v in currentevents.items()]),
-        
-        'totalcurrentevents': len(currentevents.keys()), 
-        'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
-        'totalnamespaces': len(namespaces), 
-        'totalusefulpages': sum([not v['page_is_redirect'] for k, v in pages.items()]), 
-        'totalpages': len(pages), 
-        'totalredirects': sum([v['page_is_redirect'] for k, v in pages.items()]), 
-        
-        'wiki': dumpwiki, 
-        'wikilang': dumpwiki.split('wiki')[0], 
-    }
-    #extra calculations
-    d['redirectspercent'] = round(d['totalredirects']/(d['totalpages']/100), 1)
-    d['usefulpagespercent'] = round(d['totalusefulpages']/(d['totalpages']/100), 1)
-    
-    #oldest & newest current events
-    for k, v in currentevents.items():
-        if v['it_rev_timestamp'] < d['oldestcurrenteventdate']:
-            d['oldestcurrenteventtitle'] = v['page_title']
-            d['oldestcurrenteventdate'] = v['it_rev_timestamp']
-            d['oldestcurrenteventrevid'] = v['it_rev_id']
-            d['oldestcurrenteventuser'] = v['it_rev_username']
+        #oldest & newest current events
+        for k, v in currentevents.items():
+            if v['it_rev_timestamp'] < d['oldestcurrenteventdate']:
+                d['oldestcurrenteventtitle'] = v['page_title']
+                d['oldestcurrenteventdate'] = v['it_rev_timestamp']
+                d['oldestcurrenteventrevid'] = v['it_rev_id']
+                d['oldestcurrenteventuser'] = v['it_rev_username']
 
-    for k, v in currentevents.items():
-        if v['it_rev_timestamp'] > d['newestcurrenteventdate']:
-            d['newestcurrenteventtitle'] = v['page_title']
-            d['newestcurrenteventdate'] = v['it_rev_timestamp']
-            d['newestcurrenteventrevid'] = v['it_rev_id']
-            d['newestcurrenteventuser'] = v['it_rev_username']
+        for k, v in currentevents.items():
+            if v['it_rev_timestamp'] > d['newestcurrenteventdate']:
+                d['newestcurrenteventtitle'] = v['page_title']
+                d['newestcurrenteventdate'] = v['it_rev_timestamp']
+                d['newestcurrenteventrevid'] = v['it_rev_id']
+                d['newestcurrenteventuser'] = v['it_rev_username']
 
-    #oldest & newest pages
-    for k, v in pages.items():
-        if v['page_creation_date'] < d['oldestpagecreationdate']:
-            d['oldestpagetitle'] = v['page_title']
-            d['oldestpagecreationdate'] = v['page_creation_date']
-            d['oldestpagecreator'] = v['page_creator']
+        #oldest & newest pages
+        for k, v in pages.items():
+            if v['page_creation_date'] < d['oldestpagecreationdate']:
+                d['oldestpagetitle'] = v['page_title']
+                d['oldestpagecreationdate'] = v['page_creation_date']
+                d['oldestpagecreator'] = v['page_creator']
 
-    for k, v in pages.items():
-        if v['page_creation_date'] > d['newestpagecreationdate']:
-            d['newestpagetitle'] = v['page_title']
-            d['newestpagecreationdate'] = v['page_creation_date']
-            d['newestpagecreator'] = v['page_creator']
-    
-    #stats by year
-    max_tag_time_since_creation = 24 # max hours
-    stats_by_year = {}
-    for k, v in currentevents.items():
-        year = int(v['it_rev_timestamp'].split('-')[0])
-        if not year in stats_by_year:
-            stats_by_year[year] = {'currentevents': 0, 'currenteventpages': set([]), 'currenteventpagescreated': set([]), 'totalpagescreated': 0}
+        for k, v in pages.items():
+            if v['page_creation_date'] > d['newestpagecreationdate']:
+                d['newestpagetitle'] = v['page_title']
+                d['newestpagecreationdate'] = v['page_creation_date']
+                d['newestpagecreator'] = v['page_creator']
         
-        stats_by_year[year]['currentevents'] += 1
-        stats_by_year[year]['currenteventpages'].add(v['page_id'])
-        if v['tag_time_since_creation'] <= max_tag_time_since_creation:
-            stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
+        #stats by year
+        max_tag_time_since_creation = 24 # max hours
+        stats_by_year = {}
+        for k, v in currentevents.items():
+            year = int(v['it_rev_timestamp'].split('-')[0])
+            if not year in stats_by_year:
+                stats_by_year[year] = {'currentevents': 0, 'currenteventpages': set([]), 'currenteventpagescreated': set([]), 'totalpagescreated': 0}
+            
+            stats_by_year[year]['currentevents'] += 1
+            stats_by_year[year]['currenteventpages'].add(v['page_id'])
+            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
+                stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
+            
+        for k, v in pages.items():
+            if v['page_is_redirect']:
+                continue
+            year = int(v['page_creation_date'].split('-')[0])
+            if year in stats_by_year:
+                stats_by_year[year]['totalpagescreated'] += 1
         
-    for k, v in pages.items():
-        if v['page_is_redirect']:
-            continue
-        year = int(v['page_creation_date'].split('-')[0])
-        if year in stats_by_year:
-            stats_by_year[year]['totalpagescreated'] += 1
-    
-    stats_by_year = [[k, v] for k, v in stats_by_year.items()]
-    stats_by_year.sort()
-    stats_by_year_table = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), v['totalpagescreated']) for k, v in stats_by_year])
-    stats_by_year_table += "<tr><td><b>Total</b></td>"
-    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([v['currentevents'] for k, v in stats_by_year]))
-    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpages']) for k, v in stats_by_year]))
-    stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagescreated']) for k, v in stats_by_year]))
-    stats_by_year_table += "<td><b>{0}</b></td></tr>".format(sum([v['totalpagescreated'] for k, v in stats_by_year]))
-    d['stats_by_year_table'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year_table)
-    
-    #stats by page
-    stats_by_page = {}
-    for k, v in currentevents.items():
-        if v['page_id'] in stats_by_page:
-            stats_by_page[v['page_id']]['currentevents'].append(k)
-            stats_by_page[v['page_id']]['dates'].append('<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0]))
-        else:
-            stats_by_page[v['page_id']] = {
-                'currentevents': [k], 
-                'dates': ['<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0])]
-            }
-    most_freq_pages = [[len(v['currentevents']), k, v['dates']] for k, v in stats_by_page.items()]
-    most_freq_pages.sort(reverse=True)
-    stats_by_page_table = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td><td>{3}</td></tr>'.format(d['wikilang'], pages[rev_id]['page_title'], c, ', '.join(dates)) for c, rev_id, dates in most_freq_pages[:100]])
-    d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
-    
-    #stats by event
-    stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
-    for k, v in currentevents.items():
-        if re.search(r'(fallecimiento|muerte|dead)', v['tag_string']):
-            stats_by_event['dead'] += 1
-        elif re.search(r'(conflicto|guerra|conflict|war)', v['tag_string']):
-            stats_by_event['conflict'] += 1
-        elif re.search(r'(deporte|sport)', v['tag_string']):
-            stats_by_event['sports'] += 1
-        elif re.search(r'(desastre|disaster)', v['tag_string']):
-            stats_by_event['disaster'] += 1
-        elif re.search(r'(elecciones|election)', v['tag_string']):
-            stats_by_event['election'] += 1
-        elif re.search(r'(sencillo|single)', v['tag_string']):
-            stats_by_event['music'] += 1
-        else:
-            stats_by_event['other'] += 1
-    stats_by_event = [[v, k] for k, v in stats_by_event.items()]
-    stats_by_event.sort(reverse=True)
-    stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
-    d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event_table)
-    
-    html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        stats_by_year = [[k, v] for k, v in stats_by_year.items()]
+        stats_by_year.sort()
+        stats_by_year_table = '\n'.join(["<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td></tr>".format(k, v['currentevents'], len(v['currenteventpages']), len(v['currenteventpagescreated']), v['totalpagescreated']) for k, v in stats_by_year])
+        stats_by_year_table += "<tr><td><b>Total</b></td>"
+        stats_by_year_table += "<td><b>{0}</b></td>".format(sum([v['currentevents'] for k, v in stats_by_year]))
+        stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpages']) for k, v in stats_by_year]))
+        stats_by_year_table += "<td><b>{0}</b></td>".format(sum([len(v['currenteventpagescreated']) for k, v in stats_by_year]))
+        stats_by_year_table += "<td><b>{0}</b></td></tr>".format(sum([v['totalpagescreated'] for k, v in stats_by_year]))
+        d['stats_by_year_table'] = "<table border=1 style='text-align: center;'>\n<th>Año</th><th>Eventos de actualidad</th><th>Páginas diferentes marcadas como actualidad</th><th>Páginas creadas por evento de actualidad</th><th>Páginas totales creadas</th>\n{0}\n</table>".format(stats_by_year_table)
+        
+        #stats by page
+        stats_by_page = {}
+        for k, v in currentevents.items():
+            if v['page_id'] in stats_by_page:
+                stats_by_page[v['page_id']]['currentevents'].append(k)
+                stats_by_page[v['page_id']]['dates'].append('<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0]))
+            else:
+                stats_by_page[v['page_id']] = {
+                    'currentevents': [k], 
+                    'dates': ['<a href="https://{0}.wikipedia.org/wiki/Special:Diff/{1}/prev">{2}</a>'.format(d['wikilang'], k, v['it_rev_timestamp'].split('T')[0])]
+                }
+        most_freq_pages = [[len(v['currentevents']), k, v['dates']] for k, v in stats_by_page.items()]
+        most_freq_pages.sort(reverse=True)
+        stats_by_page_table = '\n'.join(['<tr><td><a href="https://{0}.wikipedia.org/wiki/{1}">{1}</a></td><td>{2}</td><td>{3}</td></tr>'.format(d['wikilang'], pages[rev_id]['page_title'], c, ', '.join(dates)) for c, rev_id, dates in most_freq_pages[:100]])
+        d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
+        
+        #stats by event
+        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
+        for k, v in currentevents.items():
+            if re.search(r'(fallecimiento|muerte|dead)', v['tag_string']):
+                stats_by_event['dead'] += 1
+            elif re.search(r'(conflicto|guerra|conflict|war)', v['tag_string']):
+                stats_by_event['conflict'] += 1
+            elif re.search(r'(deporte|sport)', v['tag_string']):
+                stats_by_event['sports'] += 1
+            elif re.search(r'(desastre|disaster)', v['tag_string']):
+                stats_by_event['disaster'] += 1
+            elif re.search(r'(elecciones|election)', v['tag_string']):
+                stats_by_event['election'] += 1
+            elif re.search(r'(sencillo|single)', v['tag_string']):
+                stats_by_event['music'] += 1
+            else:
+                stats_by_event['other'] += 1
+        stats_by_event = [[v, k] for k, v in stats_by_event.items()]
+        stats_by_event.sort(reverse=True)
+        stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
+        d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event_table)
+        
+        html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <title>Current events ($wiki, $dumpdate)</title>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
 </head>
 <body>
-    <h1>Current events ($wiki, $dumpdate)</h1>
+    <h1><a href="https://tools.wmflabs.org/currentevents">Current events</a> ($wiki, $dumpdate)</h1>
     
     <p>Este análisis de <b>eventos de actualidad</b> corresponde a <b><a href="https://$wikilang.wikipedia.org">$wiki</a></b> con la fecha <b>$dumpdate</b>.
     
@@ -368,9 +367,49 @@ def main():
 </body>
 </html>
 """)
-    html = html.substitute(d)
+        html = html.substitute(d)
+        outputpath = '%s/index.html' % (resultdir)
+        print('Saving HTML in',outputpath)
+        f = open(outputpath, 'w')
+        f.write(html)
+        f.close()
     
-    f = open('index.html', 'w')
+    resultsul = ''
+    prevdumpwiki = ''
+    for resultdir in resultdirs:
+        dumpwiki, dumpdate = resultdir.split('/')
+        if prevdumpwiki != dumpwiki:
+            if prevdumpwiki != '':
+                resultul += '\n</ul>'
+            resultsul += '\n<li><b>%s</b></li>' % (dumpwiki)
+            resultsul += '\n<ul>\n<li><a href="%s/%s/index.html">%s</a></li>' % (dumpwiki, dumpdate, dumpdate)
+        else:
+            resultsul += '\n<li>%s</li>' % (dumpdate)
+    resultsul += '\n</ul>'
+    e = {
+        'resultsul': resultsul,
+    }
+    html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Current events</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+</head>
+<body>
+    <h1><a href="https://tools.wmflabs.org/currentevents">Current events</a></h1>
+    
+    <p>Estos son los <b>análisis de eventos de actualidad</b> disponibles.</p>
+    
+    <ul>
+        $resultsul
+    </ul>
+    
+</body>
+</html>""")
+    html = html.substitute(e)
+    outputpath = 'index.html'
+    print('Saving HTML in',outputpath)
+    f = open(outputpath, 'w')
     f.write(html)
     f.close()
     
