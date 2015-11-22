@@ -387,7 +387,7 @@ def main():
             resultsul += '\n    <li><b>%s</b></li>' % (dumpwiki)
             resultsul += '\n    <ul>\n        <li><a href="%s/%s/index.html">%s</a></li>' % (dumpwiki, dumpdate, dumpdate)
         else:
-            resultsul += '\n        <li>%s</li>' % (dumpdate)
+            resultsul += '\n        <li><a href="%s/%s/index.html">%s</a></li>' % (dumpwiki, dumpdate, dumpdate)
         prevdumpwiki = dumpwiki
     resultsul += '\n    </ul>'
     e = {
