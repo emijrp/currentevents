@@ -19,6 +19,7 @@
 #p7zip-full (if dumps are .7z): sudo apt-get install p7zip-full
 
 #Run: python script.py dumpfilename
+#Or use the bash script
 
 import csv
 import datetime

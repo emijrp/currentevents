@@ -295,7 +295,7 @@ def main():
         d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
         
         #stats by event
-        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'film': 0, 'music': 0, 'spaceflight': 0, 'sports': 0, 'videogames': 0, 'weather': 0, 'other': 0}
+        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'film': 0, 'health': 0, 'music': 0, 'spaceflight': 0, 'sports': 0, 'television': 0, 'videogames': 0, 'weather': 0, 'other': 0}
         other_events = {}
         for k, v in currentevents.items():
             if re.search(r'(conflict|conflicto|guerra|war)', v['tag_string']):
@@ -304,16 +304,20 @@ def main():
                 stats_by_event['dead'] += 1
             elif re.search(r'(desastre|disaster)', v['tag_string']):
                 stats_by_event['disaster'] += 1
-            elif re.search(r'(elecciones|eleccions|election)', v['tag_string']):
+            elif re.search(r'(elecci[óo]n|elecciones|eleccions|election)', v['tag_string']):
                 stats_by_event['election'] += 1
             elif re.search(r'(film|pel·l[ií]cula|pel[íi]cula)', v['tag_string']):
                 stats_by_event['film'] += 1
+            elif re.search(r'(health|salud)', v['tag_string']):
+                stats_by_event['health'] += 1
             elif re.search(r'(sencillo|single)', v['tag_string']):
                 stats_by_event['music'] += 1
-            elif re.search(r'(spaceflight|vol espacial)', v['tag_string']):
+            elif re.search(r'(spaceflight|vol espacial|vuelo espacial)', v['tag_string']):
                 stats_by_event['spaceflight'] += 1
-            elif re.search(r'(deporte|futbol|sport)', v['tag_string']):
+            elif re.search(r'(deporte|f[úu]tbol|sport)', v['tag_string']):
                 stats_by_event['sports'] += 1
+            elif re.search(r'(televisi[óo]n|telenovela|serie de tv)', v['tag_string']):
+                stats_by_event['television'] += 1
             elif re.search(r'(videogame|videojoc)', v['tag_string']):
                 stats_by_event['videogames'] += 1
             elif re.search(r'(meteorolog[íi]a|weather)', v['tag_string']):
@@ -330,8 +334,8 @@ def main():
         stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
         other_events = [[v, k] for k, v in other_events.items()]
         other_events.sort(reverse=True)
-        other_events_table = ', '.join(['{0} ({1})'.format(event, c) for c, event in other_events[:20]])
-        d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>\n\n<p>Los más frecuentes dentro de \"Other\": {1}</p>".format(stats_by_event_table, other_events_table)
+        other_events_table = ', '.join(['{0} ({1})'.format(event, c) for c, event in other_events[:25]])
+        d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>\n\n<p>Los más frecuentes dentro de \"Other\": {1}, ...</p>".format(stats_by_event_table, other_events_table)
         
         html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
