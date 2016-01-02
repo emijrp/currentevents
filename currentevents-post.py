@@ -308,15 +308,15 @@ def main():
                 stats_by_event['election'] += 1
             elif re.search(r'(film|pel·l[ií]cula|pel[íi]cula)', v['tag_string']):
                 stats_by_event['film'] += 1
-            elif re.search(r'(health|salud)', v['tag_string']):
+            elif re.search(r'(health|salud|salut)', v['tag_string']):
                 stats_by_event['health'] += 1
             elif re.search(r'(sencillo|single)', v['tag_string']):
                 stats_by_event['music'] += 1
             elif re.search(r'(spaceflight|vol espacial|vuelo espacial)', v['tag_string']):
                 stats_by_event['spaceflight'] += 1
-            elif re.search(r'(deporte|f[úu]tbol|sport)', v['tag_string']):
+            elif re.search(r'(deporte|b[àa]squet|baloncesto|f[úu]tbol|sport)', v['tag_string']):
                 stats_by_event['sports'] += 1
-            elif re.search(r'(televisi[óo]n|telenovela|serie de tv)', v['tag_string']):
+            elif re.search(r'(televisi[óo]n|telenovela|serie de televisi[óo]n|serie de tv)', v['tag_string']):
                 stats_by_event['television'] += 1
             elif re.search(r'(videogame|videojoc)', v['tag_string']):
                 stats_by_event['videogames'] += 1
@@ -334,7 +334,7 @@ def main():
         stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
         other_events = [[v, k] for k, v in other_events.items()]
         other_events.sort(reverse=True)
-        other_events_table = ', '.join(['{0} ({1})'.format(event, c) for c, event in other_events[:25]])
+        other_events_table = ', '.join(['{0} ({1})'.format(event, c) for c, event in other_events[:100]])
         d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>\n\n<p>Los más frecuentes dentro de \"Other\": {1}, ...</p>".format(stats_by_event_table, other_events_table)
         
         html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -408,7 +408,7 @@ def main():
 """)
         html = html.substitute(d)
         outputpath = '%s/index.html' % (resultdir)
-        print('Saving HTML in',outputpath)
+        print('Saving HTML in',outputpath,'\n')
         f = open(outputpath, 'w')
         f.write(html)
         f.close()
@@ -448,7 +448,7 @@ def main():
 </html>""")
     html = html.substitute(e)
     outputpath = 'index.html'
-    print('Saving HTML in',outputpath,'\n')
+    print('Saving HTML in',outputpath)
     f = open(outputpath, 'w')
     f.write(html)
     f.close()
