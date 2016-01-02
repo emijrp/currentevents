@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2014-2015 emijrp <emijrp@gmail.com>
+# Copyright (C) 2014-2016 emijrp <emijrp@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -56,8 +56,8 @@ def loadCurrentEventsCSV(csvfile):
             'rt_rev_comment': row[13],
             'tag_type': row[14],
             'tag_string': row[15],
-            'tag_time_since_creation': float(row[16]),
-            'tag_duration': float(row[17]),
+            'tag_time_since_creation_(hours)': float(row[16]),
+            'tag_duration_(hours)': float(row[17]),
             'tag_edits': int(row[18]),
             'tag_distinct_editors': int(row[19]),
             'diff_len': int(row[20]),
@@ -150,6 +150,14 @@ def main():
             'timereal': round(timereal/60, 2), 
             'dumpdate': dumpdate, 
             
+            'diffeditsmean': round(statistics.mean([v['tag_edits'] for k, v in currentevents.items()]), 1),
+            'diffeditsmedian': round(statistics.median([v['tag_edits'] for k, v in currentevents.items()]), 1),
+            'diffeditsmode': round(statistics.mode([v['tag_edits'] for k, v in currentevents.items()]), 1),
+            
+            'diffeditorsmean': round(statistics.mean([v['tag_distinct_editors'] for k, v in currentevents.items()]), 1),
+            'diffeditorsmedian': round(statistics.median([v['tag_distinct_editors'] for k, v in currentevents.items()]), 1),
+            'diffeditorsmode': round(statistics.mode([v['tag_distinct_editors'] for k, v in currentevents.items()]), 1),
+            
             'difflenmean': round(statistics.mean([v['diff_len'] for k, v in currentevents.items()]), 1),
             'difflenmedian': round(statistics.median([v['diff_len'] for k, v in currentevents.items()]), 1),
             'difflenmode': round(statistics.mode([v['diff_len'] for k, v in currentevents.items()]), 1),
@@ -194,6 +202,10 @@ def main():
             'tagtypecategory': sum([v['tag_type'] == 'category' for k, v in currentevents.items()]),
             'tagtypeboth': sum([v['tag_type'] == 'both' for k, v in currentevents.items()]),
             
+            'tagdurationdaysmean': round(statistics.mean([round(v['tag_duration_(hours)']/24, 0) for k, v in currentevents.items()]), 1),
+            'tagdurationdaysmedian': round(statistics.median([round(v['tag_duration_(hours)']/24, 0) for k, v in currentevents.items()]), 1),
+            'tagdurationdaysmode': round(statistics.mode([round(v['tag_duration_(hours)']/24, 0) for k, v in currentevents.items()]), 1),
+            
             'totalcurrentevents': len(currentevents.keys()), 
             'totalcurrenteventspages': len(set([v['page_id'] for k, v in currentevents.items()])), 
             'totalnamespaces': len(namespaces), 
@@ -237,7 +249,7 @@ def main():
                 d['newestpagecreator'] = v['page_creator']
         
         #stats by year
-        max_tag_time_since_creation = 24 # max hours
+        max_tag_time_since_creation_hours = 24 # max hours
         stats_by_year = {}
         for k, v in currentevents.items():
             year = int(v['it_rev_timestamp'].split('-')[0])
@@ -246,7 +258,7 @@ def main():
             
             stats_by_year[year]['currentevents'] += 1
             stats_by_year[year]['currenteventpages'].add(v['page_id'])
-            if v['tag_time_since_creation'] <= max_tag_time_since_creation:
+            if v['tag_time_since_creation_(hours)'] <= max_tag_time_since_creation_hours:
                 stats_by_year[year]['currenteventpagescreated'].add(v['page_id'])
             
         for k, v in pages.items():
@@ -283,26 +295,43 @@ def main():
         d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
         
         #stats by event
-        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'music': 0, 'sports': 0, 'other': 0}
+        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'film': 0, 'music': 0, 'spaceflight': 0, 'sports': 0, 'videogames': 0, 'weather': 0, 'other': 0}
+        other_events = {}
         for k, v in currentevents.items():
-            if re.search(r'(mort|fallecimiento|muerte|dead)', v['tag_string']):
-                stats_by_event['dead'] += 1
-            elif re.search(r'(conflicto|guerra|conflict|war)', v['tag_string']):
+            if re.search(r'(conflict|conflicto|guerra|war)', v['tag_string']):
                 stats_by_event['conflict'] += 1
-            elif re.search(r'(deporte|sport)', v['tag_string']):
-                stats_by_event['sports'] += 1
+            elif re.search(r'(dead|defunció|fallecimiento|mort|muerte)', v['tag_string']):
+                stats_by_event['dead'] += 1
             elif re.search(r'(desastre|disaster)', v['tag_string']):
                 stats_by_event['disaster'] += 1
-            elif re.search(r'(elecciones|election)', v['tag_string']):
+            elif re.search(r'(elecciones|eleccions|election)', v['tag_string']):
                 stats_by_event['election'] += 1
+            elif re.search(r'(film|pel·l[ií]cula|pel[íi]cula)', v['tag_string']):
+                stats_by_event['film'] += 1
             elif re.search(r'(sencillo|single)', v['tag_string']):
                 stats_by_event['music'] += 1
+            elif re.search(r'(spaceflight|vol espacial)', v['tag_string']):
+                stats_by_event['spaceflight'] += 1
+            elif re.search(r'(deporte|futbol|sport)', v['tag_string']):
+                stats_by_event['sports'] += 1
+            elif re.search(r'(videogame|videojoc)', v['tag_string']):
+                stats_by_event['videogames'] += 1
+            elif re.search(r'(meteorolog[íi]a|weather)', v['tag_string']):
+                stats_by_event['weather'] += 1
             else:
                 stats_by_event['other'] += 1
+                if v['tag_string'] in other_events:
+                    other_events[v['tag_string']] += 1
+                else:
+                    other_events[v['tag_string']] = 1
+            
         stats_by_event = [[v, k] for k, v in stats_by_event.items()]
         stats_by_event.sort(reverse=True)
         stats_by_event_table = '\n'.join(['<tr><td>{0}</td><td>{1}</td></tr>'.format(event, c) for c, event in stats_by_event])
-        d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>".format(stats_by_event_table)
+        other_events = [[v, k] for k, v in other_events.items()]
+        other_events.sort(reverse=True)
+        other_events_table = ', '.join(['{0} ({1})'.format(event, c) for c, event in other_events[:20]])
+        d['stats_by_event_table'] = "<table border=1 style='text-align: center;'>\n<th>Evento de actualidad</th><th>Páginas diferentes marcadas con este evento</th><th>Páginas creadas por este evento</th>\n{0}\n</table>\n\n<p>Los más frecuentes dentro de \"Other\": {1}</p>".format(stats_by_event_table, other_events_table)
         
         html = string.Template("""<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml">
@@ -334,13 +363,16 @@ def main():
         
         <li>Se han encontrado <b>$totalcurrentevents</b> eventos de actualidad repartidos en <b>$totalcurrenteventspages</b> páginas diferentes.</li>
         <ul>
-            <li>Para marcarlo como evento de actualidad, <b>$tagtypetemplate</b> usaron plantilla, <b>$tagtypecategory</b> usaron categoría y <b>$tagtypeboth</b> usaron ambos métodos.</li>
+            <li>Para marcarlo como evento de actualidad, <b>$tagtypetemplate</b> usaron solo plantilla, <b>$tagtypecategory</b> usaron solo categoría y <b>$tagtypeboth</b> usaron ambos métodos.</li>
+            <li>La duración (en días) de la marca actualidad es: <b>$tagdurationdaysmean</b> (media), <b>$tagdurationdaysmedian</b> (mediana), <b>$tagdurationdaysmode</b> (moda)
             <li>El evento de actualidad más antiguo sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$oldestcurrenteventtitle">$oldestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$oldestcurrenteventuser">$oldestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$oldestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$oldestcurrenteventrevid/prev">$oldestcurrenteventdate</a>.</li>
             <li>El evento de actualidad más reciente sucedió en <a href="https://$wikilang.wikipedia.org/wiki/$newestcurrenteventtitle">$newestcurrenteventtitle</a>, fue insertado por <a href="https://$wikilang.wikipedia.org/wiki/User:$newestcurrenteventuser">$newestcurrenteventuser</a> (<a href="https://$wikilang.wikipedia.org/wiki/Special:Contributions/$newestcurrenteventuser">contrib.</a>) el <a href="https://$wikilang.wikipedia.org/wiki/Special:Diff/$newestcurrenteventrevid/prev">$newestcurrenteventdate</a>.</li>
         </ul>
         
         <li>En cuanto a los cambios que se producen en los artículos, hay un incremento en:</li>
         <ul>
+            <li>Número de ediciones: <b>$diffeditsmean</b> (media), <b>$diffeditsmedian</b> (mediana), <b>$diffeditsmode</b> (moda)
+            <li>Número de editores distintos: <b>$diffeditorsmean</b> (media), <b>$diffeditorsmedian</b> (mediana), <b>$diffeditorsmode</b> (moda)
             <li>Tamaño en bytes: <b>$difflenmean</b> (media), <b>$difflenmedian</b> (mediana), <b>$difflenmode</b> (moda)
             <li>Número de enlaces: <b>$difflinksmean</b> (media), <b>$difflinksmedian</b> (mediana), <b>$difflinksmode</b> (moda)
             <li>Número de enlaces externos: <b>$diffextlinksmean</b> (media), <b>$diffextlinksmedian</b> (mediana), <b>$diffextlinksmode</b> (moda)
@@ -412,7 +444,7 @@ def main():
 </html>""")
     html = html.substitute(e)
     outputpath = 'index.html'
-    print('Saving HTML in',outputpath)
+    print('Saving HTML in',outputpath,'\n')
     f = open(outputpath, 'w')
     f.write(html)
     f.close()
