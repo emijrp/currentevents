@@ -93,10 +93,11 @@ def loadPagesCSV(csvfile):
     return d
 
 def main():
-    resultdirs = glob.glob("*wiki/20*")
+    resultdirs = glob.glob("/data/project/currentevents/public_html/*wiki/20*")
     resultdirs.sort()
     for resultdir in resultdirs:
-        dumpwiki, dumpdate = resultdir.split('/')
+        dumpwiki, dumpdate = resultdir.split('/')[-2:]
+        print('Postprocessing',dumpwiki,dumpdate)
         print('Reading CSV from',resultdir)
         
         #error logs
