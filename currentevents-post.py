@@ -22,6 +22,9 @@ import statistics
 import string
 import sys
 
+currentevents = {}
+pages = {}
+
 def mergefiles(csvfiles):
     csvfiles.sort()
     if csvfiles:
@@ -31,6 +34,8 @@ def mergefiles(csvfiles):
             os.system('tail -q -n +2 {0} >> {1}'.format(csvfile, prefixfile))
 
 def loadCurrentEventsCSV(csvfile):
+    global currentevents
+    
     c = 0
     f = csv.reader(open(csvfile, 'r'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     d = {}
@@ -39,7 +44,7 @@ def loadCurrentEventsCSV(csvfile):
             c += 1
             continue
         
-        d[int(row[6])] = {
+        currentevents[int(row[6])] = {
             'page_id': int(row[0]),
             'page_namespace': int(row[1]),
             'page_title': row[2],
@@ -68,10 +73,10 @@ def loadCurrentEventsCSV(csvfile):
             'diff_images': int(row[25]),
         }
         c += 1
-    
-    return d
 
 def loadPagesCSV(csvfile):
+    global pages
+    
     c = 0
     f = csv.reader(open(csvfile, 'r'), delimiter='|', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     d = {}
@@ -79,8 +84,8 @@ def loadPagesCSV(csvfile):
         if c == 0:
             c += 1
             continue
-
-        d[int(row[0])] = {
+        
+        pages[int(row[0])] = {
             'page_id': int(row[0]), 
             'page_namespace': int(row[1]), 
             'page_title': row[2], 
@@ -89,10 +94,11 @@ def loadPagesCSV(csvfile):
             'page_is_redirect': row[5] == 'True' and True or False, 
         }
         c += 1
-    
-    return d
 
 def main():
+    global currentevents
+    global pages
+    
     resultdirs = glob.glob("/data/project/currentevents/public_html/*wiki/20*")
     resultdirs.sort()
     for resultdir in resultdirs:
@@ -114,26 +120,22 @@ def main():
                     timereal = int(m[0])
         
         #currentevents csv
+        currentevents = {}
         csvfiles = glob.glob("%s/currentevents-%s-%s.csv.*" % (resultdir, dumpwiki, dumpdate))
         csvfiles.sort()
-        currentevents = {}
         for csvfile in csvfiles:
             print('Loading',csvfile)
-            d = loadCurrentEventsCSV(csvfile)
-            for k, v in d.items():
-                currentevents[k] = v
+            loadCurrentEventsCSV(csvfile)
         print('Loaded',len(currentevents.items()),'current events')
         mergefiles(csvfiles)
         
         #pages csv
+        pages = {}
         csvfiles = glob.glob("%s/pages-%s-%s.csv.*" % (resultdir, dumpwiki, dumpdate))
         csvfiles.sort()
-        pages = {}
         for csvfile in csvfiles:
             print('Loading',csvfile)
-            d = loadPagesCSV(csvfile)
-            for k, v in d.items():
-                pages[k] = v
+            loadPagesCSV(csvfile)
         print('Loaded',len(pages.items()),'pages')
         mergefiles(csvfiles)
         
@@ -296,13 +298,13 @@ def main():
         d['stats_by_page_table'] = "<table border=1 style='text-align: center;'>\n<th>Página</th><th>Veces marcada como evento actual</th><th>Fechas en las que fue marcado</th>\n{0}\n</table>".format(stats_by_page_table)
         
         #stats by event
-        stats_by_event = {'conflict': 0, 'dead': 0, 'disaster': 0, 'election': 0, 'film': 0, 'health': 0, 'music': 0, 'spaceflight': 0, 'sports': 0, 'television': 0, 'videogames': 0, 'weather': 0, 'other': 0}
+        stats_by_event = {'conflict': 0, 'death': 0, 'disaster': 0, 'election': 0, 'film': 0, 'health': 0, 'music': 0, 'spaceflight': 0, 'sports': 0, 'television': 0, 'videogames': 0, 'weather': 0, 'other': 0}
         other_events = {}
         for k, v in currentevents.items():
             if re.search(r'(conflict|conflicto|guerra|war)', v['tag_string']):
                 stats_by_event['conflict'] += 1
-            elif re.search(r'(dead|defunció|fallecimiento|mort|muerte)', v['tag_string']):
-                stats_by_event['dead'] += 1
+            elif re.search(r'(dead|death|defunció|fallecimiento|mort|muerte)', v['tag_string']):
+                stats_by_event['death'] += 1
             elif re.search(r'(desastre|disaster)', v['tag_string']):
                 stats_by_event['disaster'] += 1
             elif re.search(r'(elecci[óo]n|elecciones|eleccions|election)', v['tag_string']):
@@ -417,7 +419,7 @@ def main():
     resultsul = ''
     prevdumpwiki = ''
     for resultdir in resultdirs:
-        dumpwiki, dumpdate = resultdir.split('/')
+        dumpwiki, dumpdate = resultdir.split('/')[-2:]
         if prevdumpwiki != dumpwiki:
             if prevdumpwiki != '':
                 resultsul += '\n    </ul>'
